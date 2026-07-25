@@ -4,4 +4,4 @@
 // CHỈ CẦN SỬA DÒNG "https://..." BÊN DƯỚI KHI ĐỔI CHỖ DEPLOY BACKEND.
 const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
     ? 'http://127.0.0.1:5678/api'
-    : 'https://YOUR-BACKEND-NAME.onrender.com/api';
+    : 'https://rb-control-backend.onrender.com/api'; // ← thay bằng URL Render thật của bạn
