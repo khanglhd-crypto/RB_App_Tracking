@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 
 from api.auth import auth_bp
@@ -10,6 +10,10 @@ from api.tram import tram_bp
 from api.suvu import suvu_bp
 from api.report_pdf import report_pdf_bp
 from api.audit import audit_bp
+
+# Thư mục frontend (HTML/CSS/JS tĩnh) — phục vụ luôn từ chính server Flask
+# này để dùng nội bộ trong mạng công ty (LAN), không cần deploy 2 nơi riêng.
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
 
 app = Flask(__name__)
 CORS(app)
@@ -26,6 +30,16 @@ app.register_blueprint(audit_bp)
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok"})
+
+
+@app.route("/")
+def serve_root():
+    return send_from_directory(FRONTEND_DIR, "login.html")
+
+
+@app.route("/<path:filename>")
+def serve_frontend(filename):
+    return send_from_directory(FRONTEND_DIR, filename)
 
 
 if __name__ == "__main__":
