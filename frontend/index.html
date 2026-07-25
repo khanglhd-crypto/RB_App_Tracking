@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Tracking - RB CONTROL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --danger:  #ef4444;
+            --success: #10b981;
+            --bg:      #f4f6f9;
+            --card:    #ffffff;
+            --border:  #e5e7eb;
+            --text:    #1f2937;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* ══ HOME PAGE ══ */
+        .home-wrap { max-width: 680px; margin: 0 auto; padding: 48px 20px 40px; }
+
+        .home-header { text-align: center; margin-bottom: 36px; }
+        .home-header h1 { font-size: 28px; font-weight: 700; color: var(--primary); letter-spacing: -.5px; }
+        .home-header p  { color: #9ca3af; font-size: 13px; margin-top: 6px; }
+
+        .module-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .module-nav-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+            display: flex; align-items: center; gap: 16px; padding: 18px 20px;
+            cursor: pointer; transition: all .18s; box-shadow: 0 2px 6px rgba(0,0,0,.04);
+            text-decoration: none; color: inherit;
+        }
+        .module-nav-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.1); transform: translateY(-1px); border-color: #c4b5fd; }
+
+        .module-icon {
+            width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 20px;
+        }
+        .module-icon.purple  { background: linear-gradient(135deg,#6d28d9,#8b5cf6); }
+        .module-icon.blue    { background: linear-gradient(135deg,#0ea5e9,#38bdf8); }
+        .module-icon.sky     { background: linear-gradient(135deg,#0284c7,#0ea5e9); }
+        .module-icon.amber   { background: linear-gradient(135deg,#d97706,#f59e0b); }
+        .module-icon.teal    { background: linear-gradient(135deg,#0d9488,#14b8a6); }
+
+        .module-info { flex: 1; }
+        .module-title { font-size: 16px; font-weight: 700; color: var(--text); }
+        .module-sub   { font-size: 12px; color: #9ca3af; margin-top: 3px; }
+
+        .module-nav-card .chevron { color: #d1d5db; font-size: 14px; }
+        .module-nav-card:hover .chevron { color: var(--primary); }
+
+        .btn-back {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px;
+            background: none; color: #6b7280; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all .15s; margin-bottom: 20px;
+        }
+        .btn-back:hover { background: #f3f4f6; color: var(--text); }
+    </style>
+</head>
+<body>
+
+<script>
+    const currentUser = localStorage.getItem('user');
+    if (!currentUser) {
+        window.location.replace('login.html');
+    }
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted && !localStorage.getItem('user')) window.location.replace('login.html');
+    });
+</script>
+
+<div class="home-wrap">
+    <button class="btn-back" onclick="window.location.href='dashboard.html'">
+        <i>←</i> Quay lại
+    </button>
+
+    <div class="home-header">
+        <h1><i>RB</i> App Tracking</h1>
+        <p>Hệ thống quản lý &amp; kiểm tra thiết bị RB CONTROL</p>
+        <p id="userInfo" style="margin-top:10px;"></p>
+        <a href="#" onclick="localStorage.removeItem('user'); localStorage.removeItem('token'); window.location.href='login.html'; return false;" style="font-size:12px; color:#9ca3af; text-decoration:underline;">Đăng xuất</a>
+    </div>
+
+    <div class="module-list">
+        <div class="module-nav-card" onclick="window.location.href='test-tru.html'">
+            <div class="module-icon purple"><i>🔌</i></div>
+            <div class="module-info">
+                <div class="module-title">Test trụ xuất xưởng</div>
+                <div class="module-sub">Kiểm tra &amp; lưu trữ hình ảnh hiện trường trụ sạc</div>
+            </div>
+            <i class="chevron">▸</i>
+        </div>
+
+        <div class="module-nav-card" onclick="window.location.href='test-ipc.html'">
+            <div class="module-icon blue"><i>💻</i></div>
+            <div class="module-info">
+                <div class="module-title">Test IPC</div>
+                <div class="module-sub">Lưu mã SN, AnyDesk và UltraView cho từng máy IPC</div>
+            </div>
+            <i class="chevron">▸</i>
+        </div>
+
+        <div class="module-nav-card" onclick="window.location.href='on-tram.html'">
+            <div class="module-icon sky"><i>📡</i></div>
+            <div class="module-info">
+                <div class="module-title">Trạm Sạc</div>
+                <div class="module-sub">Quản lý thông tin IPC và trụ sạc theo từng trạm</div>
+            </div>
+            <i class="chevron">▸</i>
+        </div>
+
+        <div class="module-nav-card" onclick="window.location.href='nang-cap-tru-sac.html'">
+            <div class="module-icon teal"><i>⚙️</i></div>
+            <div class="module-info">
+                <div class="module-title">Nâng Cấp Trụ Sạc</div>
+                <div class="module-sub">Xuất phiếu ảnh nâng cấp (tách PE, lắp bộ Kit) cho trụ đã có</div>
+            </div>
+            <i class="chevron">▸</i>
+        </div>
+
+        <div class="module-nav-card" onclick="window.location.href='su-vu.html'">
+            <div class="module-icon amber"><i>⚠️</i></div>
+            <div class="module-info">
+                <div class="module-title">Sự Vụ</div>
+                <div class="module-sub">Ghi nhận &amp; theo dõi sự vụ báo lỗi tại trạm/trụ sạc</div>
+            </div>
+            <i class="chevron">▸</i>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    if (currentUser) {
+        try {
+            const u = JSON.parse(currentUser);
+            document.getElementById('userInfo').textContent = 'Xin chào, ' + (u.fullname || u.username || 'bạn') + (u.role ? ' (' + u.role + ')' : '');
+        } catch (e) {}
+    }
+</script>
+
+</body>
+</html>

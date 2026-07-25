@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test IPC - RB CONTROL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --danger:  #ef4444;
+            --success: #10b981;
+            --bg:      #f4f6f9;
+            --card:    #ffffff;
+            --border:  #e5e7eb;
+            --text:    #1f2937;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* ══ INNER PAGE SHELL ══ */
+        .inner-wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px 40px; }
+
+        .page-topbar {
+            display: flex; align-items: center; gap: 14px;
+            padding: 16px 20px; background: var(--card);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px; position: sticky; top: 0; z-index: 10;
+        }
+        .btn-back {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px;
+            background: none; color: #6b7280; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all .15s;
+        }
+        .btn-back:hover { background: #f3f4f6; color: var(--text); }
+
+        .topbar-icon {
+            width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 15px;
+        }
+        .topbar-title { font-size: 16px; font-weight: 700; color: var(--text); }
+
+        /* ══ TABS ══ */
+        .tabs {
+            display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap;
+            background: var(--card); border-radius: 10px; padding: 5px;
+            border: 1px solid var(--border); width: fit-content; max-width: 100%;
+        }
+        .tab-btn {
+            padding: 8px 20px; border: none; background: none; border-radius: 7px;
+            font-size: 13px; font-weight: 600; cursor: pointer; color: #6b7280;
+            display: flex; align-items: center; gap: 7px; transition: all .2s;
+        }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ══ CARD ══ */
+        .card {
+            background: var(--card); border-radius: 12px; padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,.05); border: 1px solid var(--border);
+        }
+        .card-title {
+            font-size: 15px; font-weight: 600; margin-bottom: 15px; padding-bottom: 10px;
+            border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;
+        }
+
+        /* ══ FORM ══ */
+        .form-group { margin-bottom: 14px; }
+        .form-group > label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #4b5563; text-transform: uppercase; letter-spacing: .4px; }
+        .form-group input[type="text"] {
+            width: 100%; padding: 9px 11px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none;
+        }
+        .form-group input[type="text"]:focus { border-color: var(--primary); }
+        .form-group select {
+            width: 100%; padding: 9px 11px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none;
+            background: #fff; color: var(--text); cursor: pointer;
+        }
+        .form-group select:focus { border-color: var(--primary); }
+
+        .btn-save {
+            width: 100%; background: var(--primary); color: #fff;
+            border: none; padding: 12px; border-radius: 6px;
+            font-weight: 600; cursor: pointer; font-size: 14px; margin-top: 4px;
+        }
+        .btn-save:hover { background: #5b21b6; }
+
+        /* ══ PHOTO PICKER (Hình SN/AnyDesk/UltraView) ══ */
+        .photo-field { margin-bottom: 14px; }
+        .photo-field > label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #4b5563; text-transform: uppercase; letter-spacing: .4px; }
+        .photo-picker-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 9px 12px; border: 1px dashed var(--primary);
+            background: #f5f3ff; color: var(--primary);
+            border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background .2s;
+        }
+        .photo-picker-btn:hover { background: #ede9fe; }
+        .photo-thumb { position: relative; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; }
+        .photo-thumb .remove-thumb {
+            position: absolute; top: 2px; right: 2px;
+            background: rgba(0,0,0,.55); color: #fff; border: none; border-radius: 50%;
+            width: 18px; height: 18px; font-size: 10px; cursor: pointer; line-height: 18px; text-align: center;
+        }
+        .ipc-photo-view { width: 100%; max-width: 200px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; display: block; margin-top: 6px; }
+
+        /* ══ IPC ══ */
+        .ipc-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 700px) { .ipc-layout { grid-template-columns: 1fr; } }
+        .ipc-item { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; margin-bottom: 6px; }
+        .ipc-header { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; transition: background .15s; }
+        .ipc-header:hover { background: #f0f9ff; }
+        .ipc-sn-label { font-weight: 700; font-size: 13px; flex: 1; color: #0369a1; }
+        .ipc-status-badge { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+        .ipc-status-select {
+            width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 13px; font-weight: 600; outline: none; cursor: pointer; background: #fff; color: var(--text);
+        }
+        .ipc-status-select:focus { border-color: var(--primary); }
+        .ipc-time  { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+        .ipc-arrow { color: #9ca3af; font-size: 11px; transition: transform .2s; }
+        .ipc-item.open .ipc-arrow { transform: rotate(180deg); }
+        .ipc-detail { display: none; border-top: 1px solid var(--border); padding: 12px 14px; }
+        .ipc-item.open .ipc-detail { display: block; }
+        .ipc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .ipc-field { background: #f0f9ff; border-radius: 6px; padding: 7px 10px; }
+        .ipc-field .fl { font-size: 10px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+        .ipc-field .fv { font-size: 13px; font-weight: 600; color: var(--text); font-family: monospace; }
+        .ipc-copy-btn { background: none; border: 1px solid #bae6fd; color: #0369a1; cursor: pointer; font-size: 11px; padding: 3px 8px; border-radius: 4px; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; }
+        .ipc-copy-btn:hover { background: #e0f2fe; }
+        .ipc-footer { display: flex; justify-content: flex-end; }
+        .ipc-note-box { background: #f9fafb; border-radius: 6px; padding: 7px 10px; margin-bottom: 10px; font-size: 12px; color: #6b7280; font-style: italic; }
+
+        .search-box { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; width: 240px; }
+        .search-box:focus { border-color: var(--primary); }
+        .empty-state { text-align: center; color: #9ca3af; padding: 50px 20px; font-size: 14px; }
+        .empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+        .btn-delete { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 4px; }
+        .btn-delete:hover { background: #fee2e2; }
+        .btn-export-rpt { width: 100%; background: #059669; color: #fff; border: none; padding: 13px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-export-rpt:hover { background: #047857; }
+
+        @media (max-width: 700px) {
+            .ipc-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<script src="js/config.js"></script>
+<script>
+    (function () {
+        function requireLogin() {
+            if (!localStorage.getItem('user')) window.location.replace('login.html');
+        }
+        requireLogin();
+        window.addEventListener('pageshow', function (e) { if (e.persisted) requireLogin(); });
+    })();
+</script>
+
+<div class="page-topbar">
+    <button class="btn-back" onclick="window.location.href='dashboard.html'">
+        <i>←</i> Quay lại
+    </button>
+    <div class="topbar-icon" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8)">
+        <i>💻</i>
+    </div>
+    <span class="topbar-title">Test IPC</span>
+</div>
+
+<div class="inner-wrap">
+    <div class="ipc-layout">
+        <div class="card">
+            <div class="card-title"><i>⌨️</i> Nhập Thông Tin IPC</div>
+            <form id="ipc-form">
+                <div class="form-group">
+                    <label for="ipc-sn">Mã SN (Serial Number)</label>
+                    <input type="text" id="ipc-sn" placeholder="Ví dụ: IPC-2024-00123" required>
+                </div>
+                <div class="photo-field">
+                    <label>Hình SN IPC</label>
+                    <input type="file" id="photo-input-sn" accept="image/*" hidden>
+                    <div id="photo-picker-sn"></div>
+                </div>
+                <div id="ipc-engineer-only-fields">
+                    <div class="form-group">
+                        <label for="ipc-anydesk">Mã AnyDesk</label>
+                        <input type="text" id="ipc-anydesk" placeholder="Ví dụ: 123 456 789">
+                    </div>
+                    <div class="photo-field">
+                        <label>Hình AnyDesk</label>
+                        <input type="file" id="photo-input-anydesk" accept="image/*" hidden>
+                        <div id="photo-picker-anydesk"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="ipc-ultraview">Mã UltraView</label>
+                        <input type="text" id="ipc-ultraview" placeholder="Ví dụ: 987654321">
+                    </div>
+                    <div class="photo-field">
+                        <label>Hình ID UltraView</label>
+                        <input type="file" id="photo-input-ultraview" accept="image/*" hidden>
+                        <div id="photo-picker-ultraview"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ipc-note">Ghi chú</label>
+                    <input type="text" id="ipc-note" placeholder="Ghi chú thêm (tuỳ chọn)">
+                </div>
+                <div class="form-group">
+                    <label for="ipc-status">Trạng thái</label>
+                    <select id="ipc-status"></select>
+                </div>
+                <button type="submit" class="btn-save">
+                    <i>💾</i> Lưu IPC
+                </button>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-title" style="justify-content:space-between">
+                <span><i>🖥️</i> Danh Sách IPC</span>
+                <input class="search-box" type="text" id="ipc-search" placeholder="🔍  Tìm mã SN..." oninput="renderIpcList()" style="width:180px;padding:5px 10px;font-size:12px">
+            </div>
+            <div id="ipc-list-container" style="max-height:520px;overflow-y:auto"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    /* Mã AnyDesk/UltraView là thông tin truy cập từ xa — chỉ role 'Engineer' mới được xem. */
+    function isEngineer() {
+        try { return (JSON.parse(localStorage.getItem('user') || '{}').role) === 'Engineer'; }
+        catch (_) { return false; }
+    }
+
+    /* ─── API (Flask backend — URL cấu hình trong js/config.js) ─── */
+    async function apiGet(path) {
+        const res  = await fetch(`${API_BASE}/${path}`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+    function getCurrentUsername() {
+        try { return JSON.parse(localStorage.getItem('user') || '{}').username || 'unknown'; }
+        catch (_) { return 'unknown'; }
+    }
+    async function apiPost(path, body) {
+        const res = await fetch(`${API_BASE}/${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Username': getCurrentUsername() },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+
+    const IPC_STATUSES = [
+        { value:'configuring', label:'Đang cấu hình',              color:'#f59e0b' },
+        { value:'configured',  label:'Đã cấu hình, chưa lắp đặt',   color:'#0ea5e9' },
+        { value:'shipping',    label:'Đang vận chuyển ra site',     color:'#8b5cf6' },
+        { value:'operating',   label:'Đang vận hành',               color:'#10b981' },
+        { value:'damaged',     label:'Hư hỏng thu hồi',             color:'#ef4444' },
+        { value:'lost',        label:'Mất thông tin',                color:'#6b7280' },
+    ];
+    function getIpcStatus(value) { return IPC_STATUSES.find(s => s.value === value) || IPC_STATUSES[0]; }
+    $('ipc-status').innerHTML = IPC_STATUSES.map(s => `<option value="${s.value}">${s.label}</option>`).join('');
+
+    /* ─── Bộ nhớ dùng chung: danh sách IPC lấy từ MySQL ─── */
+    let ipcCache = [];
+    async function refreshIpcList() {
+        try { ipcCache = (await apiGet('ipc-list.php')).items || []; }
+        catch (err) { console.error(err); }
+        renderIpcList();
+    }
+
+    /* ─── Ảnh SN / AnyDesk / UltraView (chụp hoặc chọn từ máy, nén trước khi lưu) ─── */
+    const PHOTO_FIELDS = ['sn', 'anydesk', 'ultraview'];
+    let ipcPhotos = { sn: null, anydesk: null, ultraview: null };
+
+    function compressImage(base64, maxW = 900, quality = 0.75) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, maxW / img.width);
+                const canvas = document.createElement('canvas');
+                canvas.width  = Math.round(img.width  * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => resolve(base64);
+            img.src = base64;
+        });
+    }
+
+    function renderPhotoPicker(field) {
+        const container = $(`photo-picker-${field}`);
+        const photo = ipcPhotos[field];
+        container.innerHTML = photo
+            ? `<div class="photo-thumb"><img src="${photo}" onclick="window.open('${photo}','_blank')"><button type="button" class="remove-thumb" onclick="clearIpcPhoto('${field}')">✕</button></div>`
+            : `<div class="photo-picker-btn" onclick="document.getElementById('photo-input-${field}').click()"><i>📷</i> Chọn ảnh</div>`;
+    }
+
+    function clearIpcPhoto(field) { ipcPhotos[field] = null; renderPhotoPicker(field); }
+
+    function resetIpcPhotos() {
+        ipcPhotos = { sn: null, anydesk: null, ultraview: null };
+        PHOTO_FIELDS.forEach(renderPhotoPicker);
+    }
+
+    PHOTO_FIELDS.forEach(field => {
+        $(`photo-input-${field}`).addEventListener('change', function () {
+            const file = this.files[0];
+            this.value = '';
+            if (!file || !file.type.startsWith('image/')) return;
+            const r = new FileReader();
+            r.onload = async e => {
+                ipcPhotos[field] = await compressImage(e.target.result);
+                renderPhotoPicker(field);
+            };
+            r.readAsDataURL(file);
+        });
+    });
+
+    resetIpcPhotos();
+
+    /* ─── IPC form submit ─── */
+    $('ipc-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const sn        = $('ipc-sn').value.trim();
+        const anydesk   = $('ipc-anydesk').value.trim();
+        const ultraview = $('ipc-ultraview').value.trim();
+        const note      = $('ipc-note').value.trim();
+        const status    = $('ipc-status').value;
+        if (!sn) return;
+        try {
+            await apiPost('ipc-save.php', {
+                sn, anydesk, ultraview, note, status,
+                snPhoto: ipcPhotos.sn, anydeskPhoto: ipcPhotos.anydesk, ultraviewPhoto: ipcPhotos.ultraview,
+            });
+        } catch (err) {
+            alert('Không lưu được lên máy chủ: ' + err.message);
+            return;
+        }
+        this.reset();
+        resetIpcPhotos();
+        await refreshIpcList();
+    });
+
+    function renderIpcList() {
+        const q    = ($('ipc-search').value || '').toLowerCase();
+        const filtered = q ? ipcCache.filter(r => r.sn.toLowerCase().includes(q)) : ipcCache;
+        const container = $('ipc-list-container');
+        if (!filtered.length) { container.innerHTML = '<div class="empty-state"><i>🖥️</i>' + (q ? 'Không tìm thấy.' : 'Chưa có IPC nào. Hãy thêm mới!') + '</div>'; return; }
+        container.innerHTML = filtered.map(item => {
+            const st = getIpcStatus(item.status);
+            return `
+            <div class="ipc-item" id="ipc-${item.id}">
+                <div class="ipc-header" onclick="toggleIpc(${item.id})">
+                    <i style="font-size:13px">💻</i>
+                    <div class="ipc-sn-label">${item.sn}</div>
+                    <span class="ipc-status-badge" style="color:${st.color};background:${st.color}1a">${st.label}</span>
+                    <div class="ipc-time">${item.time}</div>
+                    <i class="ipc-arrow">▾</i>
+                </div>
+                <div class="ipc-detail">
+                    <div class="ipc-fields">
+                        <div class="ipc-field" style="grid-column:1/-1">
+                            <div class="fl">Trạng Thái</div>
+                            <select class="ipc-status-select" onclick="event.stopPropagation()" onchange="updateIpcStatus(${item.id}, this.value)">
+                                ${IPC_STATUSES.map(s => `<option value="${s.value}" ${item.status === s.value ? 'selected' : ''}>${s.label}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="ipc-field"><div class="fl">Mã SN</div><div class="fv">${item.sn || '—'}</div>${item.sn ? `<button class="ipc-copy-btn" onclick="copyText('${item.sn}',this)"><i>📋</i> Copy</button>` : ''}${item.hasSnPhoto ? `<img class="ipc-photo-view" src="${API_BASE}/ipc-photo.php?id=${item.id}&field=sn" onclick="window.open('${API_BASE}/ipc-photo.php?id=${item.id}&field=sn','_blank')">` : ''}</div>
+                        ${isEngineer() ? `
+                        <div class="ipc-field"><div class="fl">AnyDesk</div><div class="fv">${item.anydesk || '—'}</div>${item.anydesk ? `<button class="ipc-copy-btn" onclick="copyText('${item.anydesk}',this)"><i>📋</i> Copy</button>` : ''}${item.hasAnydeskPhoto ? `<img class="ipc-photo-view" src="${API_BASE}/ipc-photo.php?id=${item.id}&field=anydesk" onclick="window.open('${API_BASE}/ipc-photo.php?id=${item.id}&field=anydesk','_blank')">` : ''}</div>
+                        <div class="ipc-field" style="grid-column:1/-1"><div class="fl">UltraView</div><div class="fv">${item.ultraview || '—'}</div>${item.ultraview ? `<button class="ipc-copy-btn" onclick="copyText('${item.ultraview}',this)"><i>📋</i> Copy</button>` : ''}${item.hasUltraviewPhoto ? `<img class="ipc-photo-view" src="${API_BASE}/ipc-photo.php?id=${item.id}&field=ultraview" onclick="window.open('${API_BASE}/ipc-photo.php?id=${item.id}&field=ultraview','_blank')">` : ''}</div>
+                        ` : ''}
+                    </div>
+                    ${item.note ? `<div class="ipc-note-box"><i style="margin-right:5px">📝</i>${item.note}</div>` : ''}
+                    <div class="ipc-footer"><button class="btn-delete" onclick="deleteIpc(${item.id})"><i>🗑️</i> Xóa</button></div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function toggleIpc(id) { $(`ipc-${id}`).classList.toggle('open'); }
+
+    async function updateIpcStatus(id, value) {
+        try { await apiPost('ipc-status.php', { id, status: value }); }
+        catch (err) { alert('Không cập nhật được: ' + err.message); return; }
+        const st    = getIpcStatus(value);
+        const badge = document.querySelector(`#ipc-${id} .ipc-status-badge`);
+        if (badge) { badge.textContent = st.label; badge.style.color = st.color; badge.style.background = st.color + '1a'; }
+        const item = ipcCache.find(r => r.id === id);
+        if (item) item.status = value;
+    }
+    async function deleteIpc(id) {
+        if (!confirm('Xóa IPC này chứ?')) return;
+        try { await apiPost('ipc-delete.php', { id }); }
+        catch (err) { alert('Không xóa được: ' + err.message); return; }
+        await refreshIpcList();
+    }
+
+    function copyText(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i>✅</i> Đã copy';
+            setTimeout(() => { btn.innerHTML = orig; }, 1500);
+        });
+    }
+
+    /* ─── Init ─── */
+    window.addEventListener('DOMContentLoaded', () => {
+        $('ipc-engineer-only-fields').style.display = isEngineer() ? '' : 'none';
+        refreshIpcList();
+        setInterval(() => { if (!document.hidden) refreshIpcList(); }, 6000);
+    });
+</script>
+</body>
+</html>

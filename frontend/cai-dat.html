@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cài Đặt - RB CONTROL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --primary-dark: #5b21b6;
+            --success: #10b981;
+            --danger:  #ef4444;
+            --warning: #f59e0b;
+            --bg:      #f4f6f9;
+            --card:    #ffffff;
+            --border:  #e5e7eb;
+            --text:    #1f2937;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
+        .inner-wrap { max-width: 860px; margin: 0 auto; padding: 0 20px 60px; }
+
+        .page-topbar { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: var(--card); border-bottom: 1px solid var(--border); margin-bottom: 24px; position: sticky; top: 0; z-index: 50; }
+        .btn-back { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px; background: none; color: #6b7280; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+        .btn-back:hover { background: #f3f4f6; color: var(--text); }
+        .topbar-icon { width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; background: linear-gradient(135deg,#6d28d9,#8b5cf6); }
+        .topbar-title { font-size: 16px; font-weight: 700; }
+
+        .card { background: var(--card); border-radius: 12px; padding: 20px 22px; box-shadow: 0 2px 8px rgba(0,0,0,.05); border: 1px solid var(--border); margin-bottom: 18px; }
+        .card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; padding-bottom: 11px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+        .card-title .badge-count { background: var(--danger); color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 11px; font-weight: 700; }
+
+        .acc-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        .acc-item.pending { background: #fffbeb; border-color: #fde68a; }
+        .acc-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+        .acc-info { flex: 1; min-width: 160px; }
+        .acc-username { font-weight: 700; font-size: 13.5px; }
+        .acc-meta { font-size: 11.5px; color: #6b7280; margin-top: 2px; }
+        .acc-role-badge { font-size: 10.5px; padding: 2px 9px; border-radius: 8px; font-weight: 700; background: #ede9fe; color: #5b21b6; white-space: nowrap; }
+        .acc-role-select { font-size: 11.5px; font-weight: 700; padding: 4px 8px; border-radius: 8px; border: 1px solid #ddd6fe; background: #ede9fe; color: #5b21b6; cursor: pointer; outline: none; }
+        .acc-status-badge { font-size: 10.5px; padding: 2px 9px; border-radius: 8px; font-weight: 700; white-space: nowrap; }
+        .acc-status-badge.pending { background: #fef3c7; color: #92400e; }
+        .acc-status-badge.active  { background: #d1fae5; color: #065f46; }
+        .acc-actions { display: flex; gap: 6px; }
+
+        .btn-approve { background: var(--success); color: #fff; border: none; padding: 7px 13px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-approve:hover { background: #059669; }
+        .btn-reject { background: none; border: 1.5px solid var(--danger); color: var(--danger); padding: 7px 13px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-reject:hover { background: #fef2f2; }
+        .btn-revoke { background: none; border: 1.5px solid var(--border); color: #6b7280; padding: 7px 13px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-revoke:hover { background: #f3f4f6; color: var(--danger); border-color: var(--danger); }
+
+        .empty-state { text-align: center; color: #9ca3af; padding: 30px 20px; font-size: 13px; }
+        .empty-state i { font-size: 30px; margin-bottom: 10px; display: block; }
+
+        .log-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+        .log-item:last-child { border-bottom: none; }
+        .log-time { color: #9ca3af; white-space: nowrap; font-size: 11px; flex-shrink: 0; width: 118px; }
+        .log-user { font-weight: 700; color: var(--primary); flex-shrink: 0; white-space: nowrap; }
+        .log-action-badge { font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+        .log-action-badge.create { background: #d1fae5; color: #065f46; }
+        .log-action-badge.update { background: #dbeafe; color: #1e40af; }
+        .log-action-badge.delete { background: #fee2e2; color: #991b1b; }
+        .log-action-badge.export { background: #ede9fe; color: #5b21b6; }
+        .log-desc { flex: 1; color: #374151; }
+        .log-desc .log-module { font-weight: 600; }
+        .log-desc .log-detail { color: #9ca3af; }
+    </style>
+</head>
+<body>
+<script src="js/config.js"></script>
+
+<div class="page-topbar">
+    <button class="btn-back" onclick="window.location.href='dashboard.html'">
+        <i>←</i> Quay lại
+    </button>
+    <div class="topbar-icon"><i>⚙️</i></div>
+    <span class="topbar-title">Cài Đặt - Quản lý tài khoản</span>
+</div>
+
+<div class="inner-wrap">
+    <div class="card">
+        <div class="card-title">
+            <i style="color:#f59e0b">🕐</i> Chờ duyệt đăng ký
+            <span class="badge-count" id="pending-count" style="display:none"></span>
+        </div>
+        <div id="pending-list"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><i style="color:#6d28d9">👥</i> Tất cả tài khoản</div>
+        <div id="all-list"></div>
+    </div>
+
+    <div class="card">
+        <div class="list-toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--border)">
+            <div class="card-title" style="margin:0;padding:0;border:none"><i style="color:#059669">📜</i> Lịch Sử Chỉnh Sửa</div>
+            <input type="text" class="log-search" id="log-search" placeholder="🔍  Tìm theo tài khoản, module..." oninput="renderAuditLog()" style="padding:7px 11px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;outline:none;width:220px">
+        </div>
+        <div id="log-list"></div>
+    </div>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    async function apiGet(path) {
+        const res  = await fetch(`${API_BASE}/${path}`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+    function getCurrentUsername() {
+        try { return JSON.parse(localStorage.getItem('user') || '{}').username || 'unknown'; }
+        catch (_) { return 'unknown'; }
+    }
+    async function apiPost(path, body) {
+        const res = await fetch(`${API_BASE}/${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Username': getCurrentUsername() },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+    function esc(s) { return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    const ACCOUNT_TYPES = ['Engineer', 'OS', 'AS'];
+    let usersCache = [];
+
+    async function changeUserRole(id, role) {
+        try { await apiPost('users-role.php', { id, role }); }
+        catch (err) { alert('Không đổi được loại tài khoản: ' + err.message); return; }
+        await refreshUsers();
+    }
+
+    async function refreshUsers() {
+        try { usersCache = (await apiGet('users-list.php')).items || []; }
+        catch (err) { alert('Không tải được danh sách tài khoản: ' + err.message); return; }
+        renderLists();
+    }
+
+    function renderLists() {
+        const pending = usersCache.filter(u => u.status === 'pending');
+        const pendingCon = $('pending-list');
+        $('pending-count').style.display = pending.length ? '' : 'none';
+        $('pending-count').textContent = pending.length;
+
+        pendingCon.innerHTML = pending.length ? pending.map(u => `
+            <div class="acc-item pending" id="acc-${u.id}">
+                <div class="acc-avatar">${esc(u.username).charAt(0).toUpperCase()}</div>
+                <div class="acc-info">
+                    <div class="acc-username">${esc(u.username)}</div>
+                    <div class="acc-meta">${esc(u.email)} · Đăng ký lúc ${esc(u.createdAt)}</div>
+                </div>
+                <div class="acc-actions">
+                    <button class="btn-approve" onclick="approveUser(${u.id})"><i>✅</i> Duyệt</button>
+                    <button class="btn-reject" onclick="rejectUser(${u.id})"><i>❌</i> Từ chối</button>
+                </div>
+            </div>`).join('')
+            : '<div class="empty-state"><i>✅</i>Không có tài khoản nào đang chờ duyệt.</div>';
+
+        const allCon = $('all-list');
+        allCon.innerHTML = usersCache.length ? usersCache.map(u => `
+            <div class="acc-item" id="acc-all-${u.id}">
+                <div class="acc-avatar">${esc(u.username).charAt(0).toUpperCase()}</div>
+                <div class="acc-info">
+                    <div class="acc-username">${esc(u.username)} ${u.email ? '· '+esc(u.email) : ''}</div>
+                    <div class="acc-meta">Tạo lúc ${esc(u.createdAt)}</div>
+                </div>
+                ${u.username !== 'admin'
+                    ? `<select class="acc-role-select" onchange="changeUserRole(${u.id}, this.value)">
+                        ${!ACCOUNT_TYPES.includes(u.role) ? `<option value="" disabled selected>-- Chưa phân loại --</option>` : ''}
+                        ${ACCOUNT_TYPES.map(t => `<option value="${t}" ${u.role === t ? 'selected' : ''}>${t}</option>`).join('')}
+                       </select>`
+                    : `<span class="acc-role-badge">${esc(u.role)}</span>`}
+                <span class="acc-status-badge ${u.status}">${u.status === 'pending' ? 'Chờ duyệt' : 'Đang hoạt động'}</span>
+                ${u.username !== 'admin' ? `<div class="acc-actions"><button class="btn-revoke" onclick="revokeUser(${u.id}, '${esc(u.username)}')"><i>🗑️</i> Xóa</button></div>` : ''}
+            </div>`).join('')
+            : '<div class="empty-state"><i>👥</i>Chưa có tài khoản nào.</div>';
+    }
+
+    async function approveUser(id) {
+        try { await apiPost('users-approve.php', { id }); }
+        catch (err) { alert('Không duyệt được: ' + err.message); return; }
+        await refreshUsers();
+    }
+
+    async function rejectUser(id) {
+        if (!confirm('Từ chối và xóa yêu cầu đăng ký này?')) return;
+        try { await apiPost('users-delete.php', { id }); }
+        catch (err) { alert('Không xóa được: ' + err.message); return; }
+        await refreshUsers();
+    }
+
+    async function revokeUser(id, username) {
+        if (!confirm(`Xóa tài khoản "${username}"? Người này sẽ không đăng nhập được nữa.`)) return;
+        try { await apiPost('users-delete.php', { id }); }
+        catch (err) { alert('Không xóa được: ' + err.message); return; }
+        await refreshUsers();
+    }
+
+    /* ══ LỊCH SỬ CHỈNH SỬA (AUDIT LOG) ══ */
+    const MODULE_LABEL = {
+        test_tru: 'Test Trụ Xuất Xưởng',
+        ipc: 'Test IPC',
+        on_tram: 'Trạm Sạc',
+        nang_cap: 'Nâng Cấp Trụ Sạc',
+        su_vu: 'Sự Vụ',
+        users: 'Tài khoản',
+    };
+    const ACTION_LABEL = { create: 'Tạo mới', update: 'Cập nhật', delete: 'Xóa', export: 'Xuất phiếu' };
+
+    let logCache = [];
+    async function refreshAuditLog() {
+        try { logCache = (await apiGet('audit-log.php?limit=200')).items || []; }
+        catch (err) { console.error(err); return; }
+        renderAuditLog();
+    }
+
+    function renderAuditLog() {
+        const q = ($('log-search').value || '').toLowerCase();
+        const fil = q
+            ? logCache.filter(r => (r.username+r.module+r.target+r.detail).toLowerCase().includes(q))
+            : logCache;
+        const con = $('log-list');
+        if (!fil.length) { con.innerHTML = `<div class="empty-state"><i>📜</i>${q ? 'Không tìm thấy.' : 'Chưa có lịch sử chỉnh sửa nào.'}</div>`; return; }
+        con.innerHTML = fil.map(r => `
+            <div class="log-item">
+                <span class="log-time">${esc(r.createdAt)}</span>
+                <span class="log-user">${esc(r.username)}</span>
+                <span class="log-action-badge ${r.action}">${ACTION_LABEL[r.action] || r.action}</span>
+                <span class="log-desc">
+                    <span class="log-module">${esc(MODULE_LABEL[r.module] || r.module)}</span>
+                    ${r.target ? ' · ' + esc(r.target) : ''}
+                    ${r.detail ? `<span class="log-detail"> — ${esc(r.detail)}</span>` : ''}
+                </span>
+            </div>`).join('');
+    }
+
+    function checkAccess() {
+        let user = null;
+        try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch(_) {}
+        if (!user) { window.location.replace('login.html'); return false; }
+        if (user.role !== 'admin') { window.location.replace('dashboard.html'); return false; }
+        return true;
+    }
+    checkAccess();
+    window.addEventListener('pageshow', function (e) { if (e.persisted) checkAccess(); });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if (!checkAccess()) return;
+
+        refreshUsers();
+        refreshAuditLog();
+        setInterval(() => { if (!document.hidden) { refreshUsers(); refreshAuditLog(); } }, 8000);
+    });
+</script>
+</body>
+</html>

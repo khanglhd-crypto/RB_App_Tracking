@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng nhập - RB CONTROL</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary:       #5c8a89;
+        --primary-dark:  #3d5f5e;
+        --primary-light: #8fb3b2;
+        --danger:        #ef4444;
+        --success:       #10b981;
+        --bg:            #f4f6f9;
+        --card:          #ffffff;
+        --border:        #e5e7eb;
+        --text:          #1f2937;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+    body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary) 55%, var(--primary-light));
+        padding: 20px;
+    }
+
+    .login-card {
+        background: var(--card);
+        width: 100%;
+        max-width: 380px;
+        border-radius: 18px;
+        padding: 40px 32px 32px;
+        box-shadow: 0 20px 50px rgba(0,0,0,.25);
+    }
+
+    .login-header { text-align: center; margin-bottom: 30px; }
+
+    .login-logo {
+        width: 60px; height: 60px; border-radius: 16px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-light));
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -.5px;
+        margin: 0 auto 16px;
+        box-shadow: 0 8px 20px rgba(92,138,137,.35);
+    }
+
+    .login-header h1 { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
+    .login-header p  { font-size: 13px; color: #9ca3af; margin-top: 6px; }
+
+    .form-group { margin-bottom: 18px; }
+
+    .form-group label {
+        display: block; font-size: 13px; font-weight: 600;
+        color: var(--text); margin-bottom: 6px;
+    }
+
+    .input-wrap { position: relative; }
+
+    .input-wrap .input-icon {
+        position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+        font-size: 15px; line-height: 1;
+    }
+
+    .input-wrap input {
+        width: 100%;
+        padding: 12px 14px 12px 40px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        color: var(--text);
+        outline: none;
+        transition: border-color .15s, box-shadow .15s;
+    }
+
+    .input-wrap input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(92,138,137,.12);
+    }
+
+    .toggle-pass {
+        position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+        color: #9ca3af; font-size: 12px; font-weight: 600; cursor: pointer; background: none; border: none;
+        padding: 4px 6px;
+    }
+    .toggle-pass:hover { color: var(--primary); }
+
+    .btn-login {
+        width: 100%;
+        padding: 13px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 6px;
+        transition: opacity .15s, transform .1s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-login:hover { opacity: .92; }
+    .btn-login:active { transform: scale(.98); }
+    .btn-login:disabled { opacity: .65; cursor: not-allowed; }
+
+    .message {
+        margin-top: 16px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 500;
+        display: none;
+        align-items: center;
+        gap: 8px;
+    }
+    .message.show { display: flex; }
+    .message.error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .message.success { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+
+    .spinner {
+        width: 15px; height: 15px;
+        border: 2px solid rgba(255,255,255,.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .login-footer { text-align: center; margin-top: 22px; font-size: 12px; color: #9ca3af; }
+
+    .switch-mode { text-align: center; margin-top: 16px; font-size: 13px; color: #6b7280; }
+    .switch-mode a { color: var(--primary); font-weight: 600; text-decoration: none; cursor: pointer; }
+    .switch-mode a:hover { text-decoration: underline; }
+    .hidden-form { display: none; }
+</style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="login-header">
+        <div class="login-logo">RB</div>
+        <h1>RB CONTROL</h1>
+        <p id="modeSubtitle">Đăng nhập hệ thống App Tracking</p>
+    </div>
+
+    <form id="loginForm" novalidate>
+        <div class="form-group">
+            <label for="username">Tài khoản</label>
+            <div class="input-wrap">
+                <span class="input-icon">👤</span>
+                <input type="text" id="username" name="username" placeholder="Nhập tài khoản" autocomplete="username" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Mật khẩu</label>
+            <div class="input-wrap">
+                <span class="input-icon">🔒</span>
+                <input type="password" id="password" name="password" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+                <button type="button" class="toggle-pass" id="togglePass" tabindex="-1">Hiện</button>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="btnLogin">
+            <span id="btnLoginText">Đăng nhập →</span>
+        </button>
+
+        <div class="message" id="message"></div>
+
+        <div class="switch-mode">Chưa có tài khoản? <a id="linkToRegister">Đăng ký ngay</a></div>
+    </form>
+
+    <form id="registerForm" class="hidden-form" novalidate>
+        <div class="form-group">
+            <label for="regEmail">Email</label>
+            <div class="input-wrap">
+                <span class="input-icon">📧</span>
+                <input type="text" id="regEmail" name="email" placeholder="" autocomplete="email" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="regUsername">Tài khoản</label>
+            <div class="input-wrap">
+                <span class="input-icon">👤</span>
+                <input type="text" id="regUsername" name="username" placeholder="Nhập tài khoản" autocomplete="username" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="regPassword">Mật khẩu</label>
+            <div class="input-wrap">
+                <span class="input-icon">🔒</span>
+                <input type="password" id="regPassword" name="password" placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)" autocomplete="new-password" required>
+                <button type="button" class="toggle-pass" id="toggleRegPass" tabindex="-1">Hiện</button>
+            </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="btnRegister">
+            <span id="btnRegisterText">Đăng ký →</span>
+        </button>
+
+        <div class="message" id="regMessage"></div>
+
+        <div class="switch-mode">Đã có tài khoản? <a id="linkToLogin">Đăng nhập</a></div>
+    </form>
+
+    <div class="login-footer">&copy; RB CONTROL &mdash; App Tracking</div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+(function () {
+    const API_URL          = API_BASE + '/login';
+    const REGISTER_API_URL = API_BASE + '/register';
+
+    const form        = document.getElementById('loginForm');
+    const usernameEl  = document.getElementById('username');
+    const passwordEl  = document.getElementById('password');
+    const btnLogin    = document.getElementById('btnLogin');
+    const btnLoginText= document.getElementById('btnLoginText');
+    const messageEl   = document.getElementById('message');
+    const togglePass  = document.getElementById('togglePass');
+
+    const registerForm   = document.getElementById('registerForm');
+    const regEmailEl     = document.getElementById('regEmail');
+    const regUsernameEl  = document.getElementById('regUsername');
+    const regPasswordEl  = document.getElementById('regPassword');
+    const btnRegister    = document.getElementById('btnRegister');
+    const btnRegisterText= document.getElementById('btnRegisterText');
+    const regMessageEl   = document.getElementById('regMessage');
+    const toggleRegPass  = document.getElementById('toggleRegPass');
+    const modeSubtitle   = document.getElementById('modeSubtitle');
+    const linkToRegister = document.getElementById('linkToRegister');
+    const linkToLogin    = document.getElementById('linkToLogin');
+
+    togglePass.addEventListener('click', function () {
+        const isPassword = passwordEl.type === 'password';
+        passwordEl.type = isPassword ? 'text' : 'password';
+        togglePass.textContent = isPassword ? 'Ẩn' : 'Hiện';
+    });
+    toggleRegPass.addEventListener('click', function () {
+        const isPassword = regPasswordEl.type === 'password';
+        regPasswordEl.type = isPassword ? 'text' : 'password';
+        toggleRegPass.textContent = isPassword ? 'Ẩn' : 'Hiện';
+    });
+
+    function showMessage(text, type) {
+        messageEl.textContent = text;
+        messageEl.className = 'message show ' + type;
+    }
+
+    function hideMessage() {
+        messageEl.className = 'message';
+        messageEl.textContent = '';
+    }
+
+    function showRegMessage(text, type) {
+        regMessageEl.textContent = text;
+        regMessageEl.className = 'message show ' + type;
+    }
+
+    function hideRegMessage() {
+        regMessageEl.className = 'message';
+        regMessageEl.textContent = '';
+    }
+
+    linkToRegister.addEventListener('click', function () {
+        form.classList.add('hidden-form');
+        registerForm.classList.remove('hidden-form');
+        modeSubtitle.textContent = 'Đăng ký tài khoản mới';
+        hideMessage(); hideRegMessage();
+    });
+    linkToLogin.addEventListener('click', function () {
+        registerForm.classList.add('hidden-form');
+        form.classList.remove('hidden-form');
+        modeSubtitle.textContent = 'Đăng nhập hệ thống App Tracking';
+        hideMessage(); hideRegMessage();
+    });
+
+    function setRegisterLoading(isLoading) {
+        btnRegister.disabled = isLoading;
+        btnRegisterText.innerHTML = isLoading
+            ? '<span class="spinner"></span> Đang đăng ký...'
+            : 'Đăng ký →';
+    }
+
+    registerForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideRegMessage();
+
+        const email    = regEmailEl.value.trim();
+        const username = regUsernameEl.value.trim();
+        const password = regPasswordEl.value;
+
+        if (!email || !username || !password) {
+            showRegMessage('Vui lòng nhập đầy đủ email, tài khoản và mật khẩu.', 'error');
+            return;
+        }
+
+        setRegisterLoading(true);
+
+        try {
+            const response = await fetch(REGISTER_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, username: username, password: password })
+            });
+
+            let data = {};
+            try { data = await response.json(); } catch (parseErr) { data = {}; }
+
+            if (response.ok && data.success !== false) {
+                showRegMessage('Đăng ký thành công! Đang chuyển sang đăng nhập...', 'success');
+                setTimeout(function () {
+                    linkToLogin.click();
+                    usernameEl.value = username;
+                    passwordEl.value = '';
+                    passwordEl.focus();
+                    regEmailEl.value = ''; regUsernameEl.value = ''; regPasswordEl.value = '';
+                    setRegisterLoading(false);
+                }, 1200);
+            } else {
+                showRegMessage(data.message || 'Đăng ký không thành công.', 'error');
+                setRegisterLoading(false);
+            }
+        } catch (err) {
+            showRegMessage('Không thể kết nối tới máy chủ. Vui lòng kiểm tra server (cổng 5678) đã được bật chưa.', 'error');
+            setRegisterLoading(false);
+        }
+    });
+
+    function setLoading(isLoading) {
+        btnLogin.disabled = isLoading;
+        btnLoginText.innerHTML = isLoading
+            ? '<span class="spinner"></span> Đang đăng nhập...'
+            : 'Đăng nhập →';
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideMessage();
+
+        const username = usernameEl.value.trim();
+        const password = passwordEl.value;
+
+        if (!username || !password) {
+            showMessage('Vui lòng nhập đầy đủ tài khoản và mật khẩu.', 'error');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password })
+            });
+
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (parseErr) {
+                data = {};
+            }
+
+            if (response.ok && data.success !== false) {
+                showMessage('Đăng nhập thành công! Đang chuyển hướng...', 'success');
+
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                }
+                if (data.user) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                }
+
+                setTimeout(function () {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+            } else {
+                const errMsg = data.message || data.error || 'Sai tài khoản hoặc mật khẩu.';
+                showMessage(errMsg, 'error');
+                setLoading(false);
+            }
+        } catch (err) {
+            showMessage('Không thể kết nối tới máy chủ. Vui lòng kiểm tra server (cổng 5678) đã được bật chưa.', 'error');
+            setLoading(false);
+        }
+    });
+})();
+</script>
+
+</body>
+</html>

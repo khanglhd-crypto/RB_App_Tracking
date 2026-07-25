@@ -1,0 +1,20 @@
+# Secrets — không bao giờ commit
+backend/.env
+.env
+
+# Python
+__pycache__/
+*.pyc
+backend/**/__pycache__/
+
+# Editor / tooling
+.claude/
+.vscode/
+
+# Local scratch (không dùng tới trong repo)
+uploads/
+docs/
+
+# OS
+.DS_Store
+Thumbs.db

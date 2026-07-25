@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trạm Sạc - RB CONTROL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --primary-dark: #0284c7;
+            --success: #10b981;
+            --danger:  #ef4444;
+            --warning: #f59e0b;
+            --bg:      #f4f6f9;
+            --card:    #ffffff;
+            --border:  #e5e7eb;
+            --text:    #1f2937;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
+        .inner-wrap { max-width: 860px; margin: 0 auto; padding: 0 20px 60px; }
+
+        .page-topbar { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: var(--card); border-bottom: 1px solid var(--border); margin-bottom: 24px; position: sticky; top: 0; z-index: 50; }
+        .btn-back { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px; background: none; color: #6b7280; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+        .btn-back:hover { background: #f3f4f6; color: var(--text); }
+        .topbar-icon { width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; }
+        .topbar-title { font-size: 16px; font-weight: 700; }
+
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--card); border-radius: 10px; padding: 5px; border: 1px solid var(--border); width: fit-content; }
+        .tab-btn { padding: 8px 20px; border: none; background: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; color: #6b7280; display: flex; align-items: center; gap: 7px; transition: all .2s; }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card { background: var(--card); border-radius: 12px; padding: 20px 22px; box-shadow: 0 2px 8px rgba(0,0,0,.05); border: 1px solid var(--border); margin-bottom: 14px; }
+        .card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; padding-bottom: 11px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+
+        input[type="text"] { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color .15s; }
+        input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,165,233,.1); }
+        input.has-value { border-color: var(--success); background: #f0fdf4; }
+
+        .btn-primary { background: var(--primary); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background .15s; white-space: nowrap; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-outline { background: none; border: 1.5px solid var(--primary); color: var(--primary); padding: 7px 13px; border-radius: 8px; font-weight: 600; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; white-space: nowrap; }
+        .btn-outline:hover { background: #e0f2fe; }
+        .btn-save-main { width: 100%; background: linear-gradient(135deg,#059669,#10b981); color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 10px; transition: opacity .15s; }
+        .btn-save-main:hover { opacity: .9; }
+
+        /* TONG INPUT */
+        .tong-input-wrap { position: relative; }
+        .tong-input { font-size: 16px; font-weight: 600; padding: 12px 42px 12px 16px; border-radius: 10px; }
+        .tong-clear { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 16px; }
+        .tong-clear:hover { color: var(--danger); }
+
+        /* TRAM NHO */
+        .tram-nho-section { display: none; }
+        .tram-nho-section.visible { display: block; }
+        .tni-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .tni-section-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .tni-count-badge { background: var(--primary); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; }
+
+        /* TNI ITEM */
+        .tni-item { border: 1.5px solid var(--border); border-radius: 10px; background: #fff; margin-bottom: 8px; transition: border-color .2s; }
+        .tni-item.open { border-color: var(--primary); }
+        .tni-header { display: flex; align-items: center; gap: 8px; padding: 11px 14px; cursor: pointer; user-select: none; border-radius: 9px; }
+        .tni-header:hover { background: #f8fafc; }
+        .tni-num { width: 24px; height: 24px; border-radius: 6px; background: #f3f4f6; font-size: 11px; font-weight: 700; color: #6b7280; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .tni-item.open .tni-num { background: var(--primary); color: #fff; }
+        .tni-ma-input { flex: 1; border: none; outline: none; font-size: 14px; font-weight: 600; background: transparent; min-width: 0; }
+        .tni-ma-input::placeholder { color: #9ca3af; font-weight: 400; }
+        .tni-badge { font-size: 11px; padding: 2px 8px; border-radius: 8px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+        .tni-badge.ipc { background: #e0f2fe; color: #0369a1; }
+        .tni-badge.ipc-none { background: #f3f4f6; color: #9ca3af; }
+        .tni-badge.tru { background: #ede9fe; color: #5b21b6; }
+        .tni-del-btn { background: none; border: none; color: #d1d5db; cursor: pointer; font-size: 13px; padding: 4px 6px; border-radius: 4px; flex-shrink: 0; }
+        .tni-del-btn:hover { background: #fee2e2; color: var(--danger); }
+        .tni-arrow { color: #9ca3af; font-size: 11px; transition: transform .2s; flex-shrink: 0; }
+        .tni-item.open .tni-arrow { transform: rotate(180deg); }
+
+        .tni-body { display: none; padding: 4px 14px 16px; border-top: 1px solid #f3f4f6; }
+        .tni-item.open .tni-body { display: block; }
+        .tni-sec-lbl { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .4px; margin: 14px 0 8px; }
+
+        /* IPC MINI CARD */
+        .ipc-mini-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px 12px; margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .ipc-mini-sn { font-weight: 700; font-size: 13px; color: #0369a1; flex: 1; min-width: 80px; }
+        .ipc-mini-field { font-size: 11px; background: #fff; padding: 3px 8px; border-radius: 5px; border: 1px solid #e0f2fe; display: inline-flex; align-items: center; gap: 4px; }
+        .ipc-mini-field strong { color: #0369a1; }
+        .ipc-copy-btn { background: none; border: 1px solid #bae6fd; color: #0369a1; cursor: pointer; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+        .ipc-copy-btn:hover { background: #e0f2fe; }
+        .btn-clear-small { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 11px; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; }
+        .btn-clear-small:hover { color: var(--danger); background: #fee2e2; }
+
+        /* TRU CONFIG */
+        .tru-config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+        @media (max-width: 500px) { .tru-config-row { grid-template-columns: 1fr; } }
+        .tru-config-field label { display: block; font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+        .tru-config-field input[type="text"] { padding: 8px 10px; font-size: 13px; }
+        .loai-tru-pills { display: flex; gap: 6px; }
+        .loai-pill { padding: 7px 16px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; color: #6b7280; background: none; transition: all .15s; }
+        .loai-pill:hover { border-color: var(--primary); color: var(--primary); }
+        .loai-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+        /* TRU SUB-SECTIONS */
+        .tru-sub { margin-top: 10px; }
+        .tru-sub-lbl { font-size: 12px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+
+        /* MASTER CARD */
+        .master-card { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 12px; margin-top: 6px; display: flex; align-items: center; gap: 8px; }
+        .master-card .mc-id { font-weight: 700; font-size: 13px; flex: 1; }
+        .master-card .mc-meta { font-size: 11px; color: #78716c; }
+        .master-card .mc-result { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
+        .mc-result.pass { background: #d1fae5; color: #065f46; }
+        .mc-result.fail { background: #fee2e2; color: #991b1b; }
+        .mc-result.none { background: #f3f4f6; color: #6b7280; }
+
+        /* SLAVE LIST */
+        .slave-list { display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
+        .slave-row { display: flex; align-items: center; gap: 7px; padding: 6px 10px; background: #f9fafb; border-radius: 7px; border: 1px solid var(--border); }
+        .slave-row .sr-id { font-weight: 600; font-size: 12px; flex: 1; }
+        .slave-row .sr-meta { font-size: 11px; color: #9ca3af; }
+        .sr-result { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
+        .sr-result.pass { background: #d1fae5; color: #065f46; }
+        .sr-result.fail { background: #fee2e2; color: #991b1b; }
+        .sr-result.none { background: #f3f4f6; color: #6b7280; }
+        .btn-rm { background: none; border: none; color: #d1d5db; cursor: pointer; font-size: 11px; padding: 2px 4px; }
+        .btn-rm:hover { color: var(--danger); }
+
+        /* LIST TAB */
+        .list-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+        .search-box { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; width: 220px; }
+        .search-box:focus { border-color: var(--primary); }
+
+        .tong-item { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; margin-bottom: 10px; }
+        .tong-header { display: flex; align-items: center; gap: 10px; padding: 15px 18px; cursor: pointer; user-select: none; transition: background .15s; }
+        .tong-header:hover { background: #f0f9ff; }
+        .tong-ma { font-weight: 700; font-size: 15px; flex: 1; }
+        .tong-badge { font-size: 11px; padding: 2px 9px; border-radius: 10px; background: #e0f2fe; color: #0369a1; font-weight: 600; white-space: nowrap; }
+        .tong-time { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+        .tong-arrow { color: #9ca3af; font-size: 12px; transition: transform .2s; }
+        .tong-item.open .tong-arrow { transform: rotate(180deg); }
+        .tong-detail { display: none; border-top: 1px solid var(--border); padding: 14px 18px; }
+        .tong-item.open .tong-detail { display: block; }
+
+        .nho-cards { display: flex; flex-direction: column; gap: 8px; }
+        .nho-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #f9fafb; }
+        .nho-card-header { display: flex; align-items: center; gap: 9px; padding: 10px 14px; cursor: pointer; }
+        .nho-card-header:hover { background: #f0f9ff; }
+        .nho-ma { font-weight: 700; font-size: 13px; flex: 1; }
+        .nho-detail { display: none; padding: 12px 14px; border-top: 1px solid var(--border); }
+        .nho-card.open .nho-detail { display: block; }
+        .nho-arrow { color: #9ca3af; font-size: 11px; transition: transform .2s; }
+        .nho-card.open .nho-arrow { transform: rotate(180deg); }
+
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .info-chip { background: #fff; border-radius: 8px; padding: 8px 10px; border: 1px solid var(--border); }
+        .info-chip .lbl { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+        .info-chip .val { font-size: 13px; font-weight: 600; font-family: monospace; }
+        .tru-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .tru-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 8px; border-radius: 8px; font-weight: 600; background: #ede9fe; color: #5b21b6; }
+        .tru-pill.pass { background: #d1fae5; color: #065f46; }
+        .tru-pill.fail { background: #fee2e2; color: #991b1b; }
+        .tru-pill.master { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .tru-pill-pdf { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: #fee2e2; color: #b91c1c; text-decoration: none; }
+        .tru-pill-pdf:hover { background: #fecaca; }
+
+        .tong-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
+        .btn-delete { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 12px; padding: 5px 10px; border-radius: 6px; font-weight: 600; }
+        .btn-delete:hover { background: #fee2e2; }
+
+        .empty-state { text-align: center; color: #9ca3af; padding: 48px 20px; font-size: 14px; }
+        .empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+
+        /* MODALS */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: #fff; border-radius: 14px; padding: 24px; width: 520px; max-width: 100%; max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,.2); }
+        .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .modal-title { font-size: 15px; font-weight: 700; flex: 1; }
+        .btn-modal-close { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 4px; }
+        .btn-modal-close:hover { background: #f3f4f6; }
+        .modal-search { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; width: 100%; margin-bottom: 10px; }
+        .modal-search:focus { border-color: var(--primary); }
+        .modal-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 60px; }
+        .modal-item { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s; }
+        .modal-item:hover { border-color: var(--primary); background: #f0f9ff; }
+        .modal-item.selected { border-color: var(--success); background: #f0fdf4; }
+        .modal-item-id { font-weight: 700; font-size: 13px; flex: 1; }
+        .modal-item-meta { font-size: 11px; color: #6b7280; }
+        .modal-item-result { font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
+        .modal-item.selected .modal-check { display: block !important; }
+        .modal-check { font-size: 16px; color: var(--success); display: none; }
+        .modal-footer { margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px; }
+        .btn-modal-ok { background: var(--primary); color: #fff; border: none; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-modal-ok:hover { background: var(--primary-dark); }
+        .btn-modal-cancel { background: #f3f4f6; color: #374151; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-modal-cancel:hover { background: #e5e7eb; }
+        .modal-mode-tag { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 6px; }
+        .modal-mode-tag.master { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .modal-mode-tag.slave  { background: #ede9fe; color: #5b21b6; }
+        .modal-mode-tag.ipc    { background: #e0f2fe; color: #0369a1; }
+
+        @media (max-width: 600px) {
+            .info-grid { grid-template-columns: 1fr; }
+            .tru-config-row { grid-template-columns: 1fr; }
+            .tni-badge { display: none; }
+        }
+
+        /* ══ PHIẾU ẢNH (NGHIỆM THU TRỤ SẠC) ══ */
+        .rpt-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; padding: 14px 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; }
+        @media (max-width: 600px) { .rpt-meta { grid-template-columns: 1fr 1fr; } }
+        .rpt-lbl  { display: block; font-size: 11px; font-weight: 700; color: #0369a1; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+        .rpt-meta input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; box-sizing: border-box; }
+        .rpt-meta input:focus { border-color: var(--primary); }
+
+        .rpt-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+        .rpt-slot  { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+        .rpt-slot.full { grid-column: 1 / -1; }
+        .rpt-slot-hdr  { background: #1f2937; color: #fff; padding: 7px 10px; font-size: 12px; font-weight: 700; }
+        .rpt-slot-desc { padding: 6px 10px; font-size: 11px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid var(--border); min-height: 34px; }
+        .rpt-slot-img  { flex: 1; position: relative; background: #f3f4f6; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 170px; }
+        .rpt-slot.full .rpt-slot-img { min-height: 240px; }
+        .rpt-slot-img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+        .rpt-slot-empty { text-align: center; color: #9ca3af; padding: 16px; }
+        .rpt-slot-empty i { font-size: 24px; display: block; margin-bottom: 6px; }
+        .rpt-slot-empty span { font-size: 11px; }
+        .rpt-slot-actions { padding: 8px 10px; display: flex; gap: 6px; border-top: 1px solid var(--border); }
+        .btn-pick { flex: 1; padding: 7px; background: #f0f9ff; border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-pick:hover { background: #e0f2fe; }
+        .btn-clr  { padding: 7px 10px; background: #fee2e2; border: 1px solid #fca5a5; color: var(--danger); border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-clr:hover { background: #fecaca; }
+        .btn-export-rpt { width: 100%; background: #059669; color: #fff; border: none; padding: 13px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-export-rpt:hover { background: #047857; }
+    </style>
+</head>
+<body>
+<script src="js/config.js"></script>
+<script>
+    (function () {
+        function requireLogin() {
+            if (!localStorage.getItem('user')) window.location.replace('login.html');
+        }
+        requireLogin();
+        window.addEventListener('pageshow', function (e) { if (e.persisted) requireLogin(); });
+    })();
+</script>
+
+<div class="page-topbar">
+    <button class="btn-back" onclick="window.location.href='dashboard.html'">
+        <i>←</i> Quay lại
+    </button>
+    <div class="topbar-icon" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">
+        <i>📡</i>
+    </div>
+    <span class="topbar-title">Trạm Sạc</span>
+</div>
+
+<div class="inner-wrap">
+    <div class="tabs">
+        <button class="tab-btn active" id="btn-tab-form" onclick="switchTab('form')">
+            <i>✏️</i> Nhập Liệu
+        </button>
+        <button class="tab-btn" id="btn-tab-list" onclick="switchTab('list')">
+            <i>📋</i> Danh Sách Trạm
+            <span id="list-badge" style="background:#0ea5e9;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;display:none"></span>
+        </button>
+        <button class="tab-btn" id="btn-tab-report" onclick="switchTab('report')">
+            <i>🖼️</i> Phiếu Ảnh
+        </button>
+    </div>
+
+    <!-- TAB NHẬP LIỆU -->
+    <div id="tab-form" class="tab-content active">
+        <div class="card">
+            <div class="card-title"><i style="color:#0ea5e9">📡</i> Mã Trạm</div>
+            <div style="position:relative;margin-bottom:14px">
+                <input type="text" id="ma-tong" class="tong-input" placeholder="Ví dụ: V.E.HCM1001" oninput="onMaTongChange()">
+                <button class="tong-clear" id="tong-clear-btn" onclick="clearTong()" style="display:none"><i>✕</i></button>
+            </div>
+
+            <div class="tru-config-field" style="margin-bottom:12px">
+                <label style="display:block;font-size:12px;font-weight:600;color:#4b5563;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Loại trạm</label>
+                <div class="loai-tru-pills">
+                    <button class="loai-pill" id="pill-nq" onclick="setTongLoaiTram('nhuong-quyen')">Nhượng quyền</button>
+                    <button class="loai-pill" id="pill-td" onclick="setTongLoaiTram('tu-doanh')">Tự doanh</button>
+                </div>
+            </div>
+
+            <div id="nhuong-quyen-fields" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div class="tru-config-field">
+                    <label style="display:block;font-size:12px;font-weight:600;color:#4b5563;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Tên chủ trạm</label>
+                    <input type="text" id="ten-chu-tram" placeholder="Ví dụ: Nguyễn Văn A">
+                </div>
+                <div class="tru-config-field">
+                    <label style="display:block;font-size:12px;font-weight:600;color:#4b5563;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">SĐT liên hệ</label>
+                    <input type="text" id="sdt-lien-he" placeholder="Ví dụ: 0901 234 567">
+                </div>
+            </div>
+
+            <div class="tru-config-field">
+                <label style="display:block;font-size:12px;font-weight:600;color:#4b5563;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">
+                    <i style="color:#ef4444;margin-right:4px">📍</i>Địa chỉ trạm
+                </label>
+                <input type="text" id="dia-chi" placeholder="Ví dụ: 123 Nguyễn Văn Linh, Q.7, TP.HCM">
+            </div>
+
+            <div class="tru-config-field">
+                <label style="display:block;font-size:12px;font-weight:600;color:#4b5563;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">
+                    <i style="color:#6d28d9;margin-right:4px">✅</i>Kỹ thuật viên nghiệm thu
+                </label>
+                <input type="text" id="ktv-nghiem-thu" placeholder="Ví dụ: Nguyễn Văn B">
+            </div>
+        </div>
+
+        <div class="tram-nho-section" id="tram-nho-section">
+            <div class="card">
+                <div class="tni-section-header">
+                    <div class="tni-section-title">
+                        <i style="color:#0ea5e9">🗂️</i>
+                        Mã IPC của trạm
+                        <span class="tni-count-badge" id="tni-count-badge">0</span>
+                    </div>
+                    <button class="btn-primary" onclick="addTramNho()">
+                        <i>➕</i> Thêm mã IPC
+                    </button>
+                </div>
+                <div id="tni-list">
+                    <div id="tni-empty" style="text-align:center;color:#9ca3af;padding:24px;font-size:13px">
+                        <i style="font-size:24px;display:block;margin-bottom:8px">🗂️</i>
+                        Chưa có mã IPC nào — bấm <strong>Thêm mã IPC</strong> để bắt đầu
+                    </div>
+                </div>
+                <button class="btn-save-main" onclick="saveTramTong()">
+                    <i>💾</i> Lưu Trạm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB DANH SÁCH -->
+    <div id="tab-list" class="tab-content">
+        <div class="card">
+            <div class="list-toolbar">
+                <span id="list-count" style="font-size:13px;color:#6b7280"></span>
+                <input type="text" class="search-box" id="search-tram" placeholder="🔍  Tìm mã trạm..." oninput="renderList()">
+            </div>
+            <div id="tong-list-container"></div>
+        </div>
+    </div>
+
+    <!-- TAB PHIẾU ẢNH -->
+    <div id="tab-report" class="tab-content">
+        <div class="rpt-meta">
+            <div><label class="rpt-lbl">Mã trạm sạc</label><input type="text" id="rpt-ma-tram" placeholder="Nhập ở tab Nhập Liệu" readonly style="background:#f3f4f6;cursor:not-allowed"></div>
+            <div>
+                <label class="rpt-lbl">Mã trụ sạc — mỗi trụ 1 phiếu riêng</label>
+                <input type="text" id="rpt-ma-tru" placeholder="HCM1001.001" onchange="otSwitchTru(this.value)">
+                <select id="rpt-tru-picker" style="margin-top:6px;width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;outline:none" onchange="otPickTru(this.value)">
+                    <option value="">— Chọn trụ đã nhập ở Nhập Liệu —</option>
+                </select>
+            </div>
+            <div><label class="rpt-lbl">IPC Master</label><input type="text" id="rpt-ipc-master" placeholder="EVSE_Config"></div>
+            <div><label class="rpt-lbl">Đơn vị nghiệm thu</label><input type="text" id="rpt-don-vi" placeholder="B-Connect"></div>
+            <div><label class="rpt-lbl">Địa điểm lắp đặt</label><input type="text" id="rpt-dia-diem" placeholder="Nhập ở tab Nhập Liệu" readonly style="background:#f3f4f6;cursor:not-allowed"></div>
+            <div><label class="rpt-lbl">Ngày tạo phiếu</label><input type="text" id="rpt-ngay" placeholder="24/07/2026"></div>
+        </div>
+        <div class="rpt-slots" id="rpt-slots"></div>
+        <button class="btn-export-rpt" onclick="exportOtReport(event)">
+            <i>📥</i> Xuất Phiếu
+        </button>
+    </div>
+</div>
+
+<!-- Modal IPC -->
+<div class="modal-overlay" id="ipc-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <i style="color:#0369a1">💻</i>
+            <span class="modal-title">Chọn IPC</span>
+            <span class="modal-mode-tag ipc">Single</span>
+            <button class="btn-modal-close" onclick="closeModal('ipc')"><i>✕</i></button>
+        </div>
+        <input type="text" class="modal-search" id="modal-ipc-search" placeholder="🔍  Tìm mã SN..." oninput="renderModalIpc()">
+        <div class="modal-list" id="modal-ipc-list"></div>
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" onclick="closeModal('ipc')">Hủy</button>
+            <button class="btn-modal-ok" style="background:#0369a1" onclick="confirmIpc()"><i>✅</i> Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Trụ (Master & Slave) -->
+<div class="modal-overlay" id="tru-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <i style="color:#6d28d9">🔌</i>
+            <span class="modal-title" id="tru-modal-title">Chọn Trụ</span>
+            <span class="modal-mode-tag" id="tru-modal-tag">Master</span>
+            <button class="btn-modal-close" onclick="closeModal('tru')"><i>✕</i></button>
+        </div>
+        <input type="text" class="modal-search" id="modal-tru-search" placeholder="🔍  Tìm mã trụ..." oninput="renderModalTru()">
+        <div class="modal-list" id="modal-tru-list"></div>
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" onclick="closeModal('tru')">Hủy</button>
+            <button class="btn-modal-ok" onclick="confirmTru()"><i>✅</i> Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận vị trí lưu Phiếu Ảnh -->
+<div class="modal-overlay" id="save-loc-modal">
+    <div class="modal-box" style="width:440px">
+        <div class="modal-header">
+            <i style="color:#059669">📁</i>
+            <span class="modal-title">Xác nhận vị trí lưu</span>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:10px">Phiếu Ảnh và các ảnh đã chọn sẽ được lưu vào:</p>
+        <div id="save-loc-path" style="font-family:monospace;font-size:12.5px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;word-break:break-all"></div>
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" id="save-loc-cancel">Hủy</button>
+            <button class="btn-modal-ok" id="save-loc-ok"><i>💾</i> Lưu</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    /* Mã AnyDesk/UltraView là thông tin truy cập từ xa — chỉ role 'Engineer' mới được xem. */
+    function isEngineer() {
+        try { return (JSON.parse(localStorage.getItem('user') || '{}').role) === 'Engineer'; }
+        catch (_) { return false; }
+    }
+
+    /* ─── API (Flask backend — URL cấu hình trong js/config.js) ─── */
+    async function apiGet(path) {
+        const res  = await fetch(`${API_BASE}/${path}`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+    function getCurrentUsername() {
+        try { return JSON.parse(localStorage.getItem('user') || '{}').username || 'unknown'; }
+        catch (_) { return 'unknown'; }
+    }
+    async function apiPost(path, body) {
+        const res = await fetch(`${API_BASE}/${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Username': getCurrentUsername() },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+
+    /* Server backend đôi lúc tự khởi động lại (khi có cập nhật code) làm rớt đúng
+       request đang chạy ("Failed to fetch") dù không phải lỗi thật — tự thử lại
+       vài lần trước khi báo lỗi cho người dùng, dành cho các thao tác quan trọng
+       như xuất PDF. */
+    async function apiPostWithRetry(path, body, retries = 3, delayMs = 1500) {
+        for (let attempt = 0; ; attempt++) {
+            try {
+                return await apiPost(path, body);
+            } catch (err) {
+                const isNetworkErr = err instanceof TypeError || /Failed to fetch/i.test(err.message || '');
+                if (!isNetworkErr || attempt >= retries) throw err;
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+        }
+    }
+
+    /* ─── Bộ nhớ dùng chung: danh sách trạm lấy từ MySQL ─── */
+    let tramCache = [];
+    async function refreshTramList() {
+        try { tramCache = (await apiGet('tram-list.php')).items || []; }
+        catch (err) { console.error(err); }
+        updateBadge();
+        if ($('tab-list').classList.contains('active')) renderList();
+    }
+
+    /* ── state ── */
+    let tniCounter   = 0;
+    let tramNhoList  = [];
+    let openTniId    = null;
+    let tongLoaiTram = '';  // 'nhuong-quyen' | 'tu-doanh' | ''
+
+    // modal state
+    let ipcModalFor  = null, ipcModalSel = null;
+    let truModalFor  = null, truModalMode = 'master', truModalSel = null; // null or id for master; [] for slave
+
+    /* ══ TABS ══ */
+    function switchTab(n) {
+        ['form','list','report'].forEach(t => {
+            $(`tab-${t}`).classList.toggle('active', t===n);
+            $(`btn-tab-${t}`).classList.toggle('active', t===n);
+        });
+        if (n==='list') refreshTramList();
+        if (n==='report') initOtReportTab();
+    }
+
+    /* ══ TRẠM TỔNG ══ */
+    function onMaTongChange() {
+        const v = $('ma-tong').value.trim();
+        $('ma-tong').classList.toggle('has-value', !!v);
+        $('tong-clear-btn').style.display = v ? '' : 'none';
+        $('tram-nho-section').classList.toggle('visible', !!v);
+    }
+
+    function setTongLoaiTram(v) {
+        tongLoaiTram = tongLoaiTram === v ? '' : v;
+        $('pill-nq').classList.toggle('active', tongLoaiTram === 'nhuong-quyen');
+        $('pill-td').classList.toggle('active', tongLoaiTram === 'tu-doanh');
+        const nqFields = $('nhuong-quyen-fields');
+        nqFields.style.display = tongLoaiTram === 'nhuong-quyen' ? 'grid' : 'none';
+    }
+
+    function clearTong() {
+        $('ma-tong').value = ''; onMaTongChange();
+        tongLoaiTram = '';
+        $('pill-nq').classList.remove('active');
+        $('pill-td').classList.remove('active');
+        $('nhuong-quyen-fields').style.display = 'none';
+        $('ten-chu-tram').value = '';
+        $('sdt-lien-he').value  = '';
+        $('dia-chi').value         = '';
+        $('ktv-nghiem-thu').value  = '';
+        tramNhoList = []; openTniId = null; tniCounter = 0;
+        renderTniList();
+    }
+
+    /* ══ TRẠM NHỎ ══ */
+    function newTni(id) {
+        return { tempId: id, maNho: '', ipc: null, verCT: '', loaiTru: '', congSuat: '', truMaster: null, truSlaves: [] };
+    }
+    function getTni(id) { return tramNhoList.find(t => t.tempId === id); }
+
+    /* IPC/trụ đã gán cho 1 trạm đã lưu rồi (tramCache) HOẶC đã gán cho 1 mã IPC khác
+       ngay trong trạm đang tạo dở (tramNhoList) thì không cho chọn lại nữa.
+       excludeTempId: bỏ qua chính mã IPC đang mở modal (để nó vẫn thấy IPC/trụ nó đã chọn). */
+    function getUsedIpcIds(excludeTempId) {
+        const used = new Set();
+        tramCache.forEach(r => (r.tramNho||[]).forEach(n => { if (n.ipc?.id) used.add(n.ipc.id); }));
+        tramNhoList.forEach(item => {
+            if (item.tempId === excludeTempId) return;
+            if (item.ipc?.id) used.add(item.ipc.id);
+        });
+        return used;
+    }
+    function getUsedTruIds(excludeTempId) {
+        const used = new Set();
+        tramCache.forEach(r => (r.tramNho||[]).forEach(n => {
+            if (n.truMaster?.id) used.add(n.truMaster.id);
+            (n.truSlaves||[]).forEach(t => { if (t.id) used.add(t.id); });
+        }));
+        tramNhoList.forEach(item => {
+            if (item.tempId === excludeTempId) return;
+            if (item.truMaster?.id) used.add(item.truMaster.id);
+            (item.truSlaves||[]).forEach(t => { if (t.id) used.add(t.id); });
+        });
+        return used;
+    }
+
+    function addTramNho() {
+        tniCounter++;
+        tramNhoList.push(newTni(tniCounter));
+        openTniId = tniCounter;
+        renderTniList();
+        setTimeout(() => { const el = $(`tni-ma-${tniCounter}`); if (el) el.focus(); }, 60);
+    }
+    function removeTni(id) {
+        tramNhoList = tramNhoList.filter(t => t.tempId !== id);
+        if (openTniId === id) openTniId = null;
+        renderTniList();
+    }
+    function toggleTni(id) { openTniId = openTniId === id ? null : id; renderTniList(); }
+
+    /* ══ RENDER ══ */
+    function renderTniList() {
+        $('tni-count-badge').textContent = tramNhoList.length;
+        const empty = $('tni-empty');
+        const list  = $('tni-list');
+        if (!tramNhoList.length) { if (empty) empty.style.display = ''; list.innerHTML = ''; return; }
+        if (empty) empty.style.display = 'none';
+        list.innerHTML = tramNhoList.map((item, idx) => renderTni(item, idx)).join('');
+    }
+
+    function renderTni(item, idx) {
+        const isOpen    = openTniId === item.tempId;
+        const truTotal  = (item.truMaster ? 1 : 0) + item.truSlaves.length;
+        const ipcBadge  = item.ipc
+            ? `<span class="tni-badge ipc"><i style="font-size:9px">💻</i> ${item.ipc.sn}</span>`
+            : `<span class="tni-badge ipc-none">Chưa có IPC</span>`;
+        const truBadge  = `<span class="tni-badge tru"><i style="font-size:9px">🔌</i> ${truTotal} trụ</span>`;
+
+        // IPC body
+        const ipcBody = item.ipc ? `
+            <div class="ipc-mini-card">
+                <span class="ipc-mini-sn"><i style="color:#0ea5e9;font-size:11px">💻</i> ${item.ipc.sn}</span>
+                ${isEngineer() && item.ipc.anydesk   ? `<span class="ipc-mini-field"><strong>AnyDesk:</strong> ${item.ipc.anydesk}<button class="ipc-copy-btn" onclick="cpTxt('${esc(item.ipc.anydesk)}',this)"><i>📋</i></button></span>` : ''}
+                ${isEngineer() && item.ipc.ultraview ? `<span class="ipc-mini-field"><strong>UV:</strong> ${item.ipc.ultraview}<button class="ipc-copy-btn" onclick="cpTxt('${esc(item.ipc.ultraview)}',this)"><i>📋</i></button></span>` : ''}
+                <button class="btn-clear-small" onclick="clearIpc(${item.tempId})"><i>✕</i> Bỏ chọn</button>
+            </div>` : '';
+
+        // Master card
+        const masterCard = item.truMaster ? (() => {
+            const t  = item.truMaster;
+            const rc = t.result==='Pass'?'pass':t.result==='Fail'?'fail':'none';
+            return `<div class="master-card" style="margin-top:6px">
+                <i style="color:#f59e0b;font-size:12px;flex-shrink:0">⭐</i>
+                <span class="mc-id">${t.pillar}</span>
+                <span class="mc-meta">${[t.model,t.source].filter(Boolean).join(' · ')}</span>
+                <span class="mc-result ${rc}">${t.result||'N/A'}</span>
+                <button class="btn-rm" onclick="clearMaster(${item.tempId})"><i>✕</i></button>
+            </div>`;
+        })() : '';
+
+        // Slave list
+        const slaveListHtml = item.truSlaves.length ? `
+            <div class="slave-list">
+                ${item.truSlaves.map(t => {
+                    const rc = t.result==='Pass'?'pass':t.result==='Fail'?'fail':'none';
+                    return `<div class="slave-row">
+                        <i style="color:#6d28d9;font-size:11px;flex-shrink:0">🔌</i>
+                        <span class="sr-id">${t.pillar}</span>
+                        <span class="sr-meta">${[t.model,t.source].filter(Boolean).join(' · ')}</span>
+                        <span class="sr-result ${rc}">${t.result||'N/A'}</span>
+                        <button class="btn-rm" onclick="removeSlave(${item.tempId},${t.id})"><i>✕</i></button>
+                    </div>`;
+                }).join('')}
+            </div>` : '';
+
+        return `
+        <div class="tni-item ${isOpen?'open':''}" id="tni-${item.tempId}">
+            <div class="tni-header" onclick="toggleTni(${item.tempId})">
+                <span class="tni-num">${String(idx+1).padStart(2,'0')}</span>
+                <input type="text" id="tni-ma-${item.tempId}" class="tni-ma-input"
+                    value="${esc(item.maNho)}" placeholder="Mã IPC cho trạm (vd: HCM1001.00${idx+1})"
+                    onclick="event.stopPropagation()" oninput="updateMa(${item.tempId},this.value)">
+                ${ipcBadge} ${truBadge}
+                <button class="tni-del-btn" onclick="event.stopPropagation();removeTni(${item.tempId})"><i>✕</i></button>
+                <i class="tni-arrow">▾</i>
+            </div>
+            <div class="tni-body">
+
+                <!-- IPC -->
+                <div class="tni-sec-lbl">IPC</div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                    <button class="btn-outline" style="background:#f0f9ff;border-color:#bae6fd;color:#0369a1" onclick="openIpcModal(${item.tempId})">
+                        <i>💻</i> ${item.ipc ? 'Đổi IPC' : 'Chọn từ danh sách IPC'}
+                    </button>
+                </div>
+                ${ipcBody}
+
+                <!-- Trụ config -->
+                <div class="tni-sec-lbl">Trụ Sạc</div>
+                <div class="tru-config-row">
+                    <div class="tru-config-field">
+                        <label>Ver chương trình</label>
+                        <input type="text" id="tni-ver-${item.tempId}" value="${esc(item.verCT)}"
+                            placeholder="vd: v1.2.3" oninput="updateVer(${item.tempId},this.value)"
+                            onclick="event.stopPropagation()">
+                    </div>
+                    <div class="tru-config-field">
+                        <label>Loại kết nối</label>
+                        <div class="loai-tru-pills">
+                            <button class="loai-pill ${item.loaiTru==='link'?'active':''}" onclick="setLoai(${item.tempId},'link')">Link</button>
+                            <button class="loai-pill ${item.loaiTru==='non-link'?'active':''}" onclick="setLoai(${item.tempId},'non-link')">Non-link</button>
+                        </div>
+                    </div>
+                    <div class="tru-config-field">
+                        <label>Công suất</label>
+                        <div class="loai-tru-pills">
+                            <button class="loai-pill ${item.congSuat==='120'?'active':''}" onclick="setCongSuat(${item.tempId},'120')">120 kW</button>
+                            <button class="loai-pill ${item.congSuat==='60'?'active':''}"  onclick="setCongSuat(${item.tempId},'60')">60 kW</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Master -->
+                <div class="tru-sub">
+                    <div class="tru-sub-lbl">
+                        <i style="color:#f59e0b;font-size:11px">⭐</i>
+                        Trụ Master
+                    </div>
+                    <button class="btn-outline" style="background:#fffbeb;border-color:#fde68a;color:#92400e"
+                        onclick="openTruModal(${item.tempId},'master')">
+                        <i>🔌</i> ${item.truMaster ? 'Đổi trụ Master' : 'Chọn trụ Master'}
+                    </button>
+                    ${masterCard}
+                </div>
+
+                <!-- Slave -->
+                <div class="tru-sub" style="margin-top:10px">
+                    <div class="tru-sub-lbl">
+                        <i style="color:#6b7280;font-size:11px">🔗</i>
+                        Trụ Slave
+                    </div>
+                    ${slaveListHtml}
+                    <button class="btn-outline" onclick="openTruModal(${item.tempId},'slave')" style="margin-top:${item.truSlaves.length?'8px':'0'}">
+                        <i>${item.truSlaves.length ? '➕' : '🔍'}</i> ${item.truSlaves.length ? 'Thêm trụ Slave' : 'Chọn trụ Slave'}
+                    </button>
+                </div>
+
+            </div>
+        </div>`;
+    }
+
+    /* ══ FIELD UPDATES (no re-render) ══ */
+    function updateMa(id, v)  { const t = getTni(id); if (t) t.maNho = v; }
+    function updateVer(id, v) { const t = getTni(id); if (t) t.verCT = v; }
+    function setLoai(id, v)      { const t = getTni(id); if (!t) return; t.loaiTru   = t.loaiTru   === v ? '' : v; openTniId = id; renderTniList(); }
+    function setCongSuat(id, v)  { const t = getTni(id); if (!t) return; t.congSuat  = t.congSuat  === v ? '' : v; openTniId = id; renderTniList(); }
+    function setLoaiTram(id, v)  { const t = getTni(id); if (!t) return; t.loaiTram  = t.loaiTram  === v ? '' : v; openTniId = id; renderTniList(); }
+
+    /* ══ IPC MODAL ══ */
+    let ipcModalCache = [];
+
+    async function openIpcModal(id) {
+        ipcModalFor = id;
+        ipcModalSel = getTni(id)?.ipc?.id ?? null;
+        $('modal-ipc-search').value = '';
+        $('modal-ipc-list').innerHTML = '<div class="empty-state" style="padding:20px"><i>⏳</i>Đang tải danh sách IPC...</div>';
+        $('ipc-modal').classList.add('open');
+        try { ipcModalCache = (await apiGet('ipc-list.php')).items || []; }
+        catch (err) { ipcModalCache = []; }
+        renderModalIpc();
+    }
+    function renderModalIpc() {
+        const q     = $('modal-ipc-search').value.toLowerCase();
+        const used  = getUsedIpcIds(ipcModalFor);
+        const avail = ipcModalCache.filter(r => !used.has(r.id) || r.id === ipcModalSel);
+        const fil   = q ? avail.filter(r => r.sn.toLowerCase().includes(q)) : avail;
+        const con = $('modal-ipc-list');
+        if (!ipcModalCache.length) { con.innerHTML = '<div class="empty-state" style="padding:20px"><i>💻</i>Chưa có IPC nào. Thêm tại module Test IPC.</div>'; return; }
+        if (!avail.length) { con.innerHTML = '<div class="empty-state" style="padding:20px"><i>💻</i>Tất cả IPC đã được gán cho trạm khác. Thêm mới tại module Test IPC.</div>'; return; }
+        if (!fil.length) { con.innerHTML = '<div class="empty-state" style="padding:14px"><i>🔍</i>Không tìm thấy</div>'; return; }
+        con.innerHTML = fil.map(r => {
+            const sel = ipcModalSel === r.id;
+            return `<div class="modal-item ${sel?'selected':''}" onclick="selIpc(${r.id})">
+                <i style="color:#0369a1;flex-shrink:0">💻</i>
+                <span class="modal-item-id">${r.sn}</span>
+                <span class="modal-item-meta">${isEngineer() ? (r.anydesk?'AD: '+r.anydesk:'')+(r.ultraview?' · UV: '+r.ultraview:'') : ''}</span>
+                <i class="modal-check">✅</i>
+            </div>`;
+        }).join('');
+    }
+    function selIpc(id) { ipcModalSel = ipcModalSel === id ? null : id; renderModalIpc(); }
+    function confirmIpc() {
+        const item = getTni(ipcModalFor); if (!item) { closeModal('ipc'); return; }
+        if (ipcModalSel === null) { item.ipc = null; }
+        else { const r = ipcModalCache.find(x => x.id === ipcModalSel); if (r) item.ipc = {id:r.id,sn:r.sn,anydesk:r.anydesk,ultraview:r.ultraview}; }
+        openTniId = ipcModalFor; closeModal('ipc'); renderTniList();
+    }
+    function clearIpc(id) { const t = getTni(id); if (t) t.ipc = null; openTniId = id; renderTniList(); }
+
+    /* ══ TRU MODAL ══ */
+    let truModalCache = [];
+
+    async function openTruModal(id, mode) {
+        truModalFor  = id;
+        truModalMode = mode;
+        const item = getTni(id);
+        if (mode === 'master') {
+            truModalSel = item?.truMaster?.id ?? null;
+            $('tru-modal-title').textContent = 'Chọn Trụ Master';
+            $('tru-modal-tag').textContent   = 'Master (1 trụ)';
+            $('tru-modal-tag').className     = 'modal-mode-tag master';
+        } else {
+            truModalSel = null; // mỗi lần chỉ thêm 1 trụ slave mới
+            $('tru-modal-title').textContent = 'Chọn Trụ Slave';
+            $('tru-modal-tag').textContent   = 'Slave (chọn 1 trụ)';
+            $('tru-modal-tag').className     = 'modal-mode-tag slave';
+        }
+        $('modal-tru-search').value = '';
+        $('modal-tru-list').innerHTML = '<div class="empty-state" style="padding:20px"><i>⏳</i>Đang tải danh sách trụ...</div>';
+        $('tru-modal').classList.add('open');
+        try { truModalCache = (await apiGet('history.php')).items || []; }
+        catch (err) { truModalCache = []; }
+        renderModalTru();
+    }
+
+    function renderModalTru() {
+        const q     = $('modal-tru-search').value.toLowerCase();
+        const used  = getUsedTruIds(truModalFor);
+        const item  = getTni(truModalFor);
+        // Trụ đã gán làm Master/Slave khác NGAY TRONG mã IPC này thì không cho chọn trùng nữa
+        const taken = new Set([item?.truMaster?.id, ...((item?.truSlaves||[]).map(s => s.id))].filter(Boolean));
+        const isSel = t => truModalSel === t.id;
+        const avail = truModalCache.filter(t => (!used.has(t.id) && !taken.has(t.id)) || isSel(t));
+        const fil   = q ? avail.filter(t => t.pillar.toLowerCase().includes(q)) : avail;
+        const con = $('modal-tru-list');
+        if (!truModalCache.length) { con.innerHTML = '<div class="empty-state" style="padding:20px"><i>🔌</i>Chưa có trụ nào. Thêm tại module Test Trụ.</div>'; return; }
+        if (!avail.length) { con.innerHTML = '<div class="empty-state" style="padding:20px"><i>🔌</i>Tất cả trụ đã được gán cho trạm khác. Thêm mới tại module Test Trụ.</div>'; return; }
+        if (!fil.length) { con.innerHTML = '<div class="empty-state" style="padding:14px"><i>🔍</i>Không tìm thấy</div>'; return; }
+        con.innerHTML = fil.map(t => {
+            const sel = isSel(t);
+            const rc  = t.result==='Pass'?'pass':t.result==='Fail'?'fail':'none';
+            const rc2 = t.result==='Pass'?'#d1fae5':t.result==='Fail'?'#fee2e2':'#f3f4f6';
+            const rc3 = t.result==='Pass'?'#065f46':t.result==='Fail'?'#991b1b':'#6b7280';
+            return `<div class="modal-item ${sel?'selected':''}" onclick="selTru(${t.id})">
+                <i style="color:#6d28d9;flex-shrink:0">🔌</i>
+                <span class="modal-item-id">${t.pillar}</span>
+                <span class="modal-item-meta">${[t.model,t.source,t.factory].filter(Boolean).join(' · ')}${t.time?' — '+t.time:''}</span>
+                <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:8px;background:${rc2};color:${rc3}">${t.result||'N/A'}</span>
+                <i class="modal-check">✅</i>
+            </div>`;
+        }).join('');
+    }
+
+    function selTru(id) {
+        truModalSel = truModalSel === id ? null : id;
+        renderModalTru();
+    }
+
+    function confirmTru() {
+        const item = getTni(truModalFor); if (!item) { closeModal('tru'); return; }
+        const lst  = truModalCache;
+        const toRecord = r => ({ id:r.id, pillar:r.pillar, model:r.model, source:r.source, factory:r.factory, result:r.result });
+
+        let jumpTru = null;
+        if (truModalMode === 'master') {
+            item.truMaster = truModalSel ? toRecord(lst.find(t => t.id === truModalSel)) : null;
+            if (item.truMaster) jumpTru = item.truMaster;
+        } else if (truModalSel) {
+            const rec = toRecord(lst.find(t => t.id === truModalSel));
+            if (rec && !item.truSlaves.some(s => s.id === rec.id)) item.truSlaves.push(rec);
+            jumpTru = rec;
+        }
+        openTniId = truModalFor; closeModal('tru'); renderTniList();
+
+        // Vừa chọn xong trụ nào thì nhảy thẳng qua Phiếu Ảnh để chụp/nhập ảnh cho trụ đó
+        if (jumpTru) {
+            switchTab('report');
+            otPickTru(jumpTru.pillar, jumpTru.id);
+        }
+    }
+
+    function clearMaster(id)          { const t = getTni(id); if (t) t.truMaster = null; openTniId = id; renderTniList(); }
+    function removeSlave(tniId, tId)  { const t = getTni(tniId); if (t) t.truSlaves = t.truSlaves.filter(s => s.id !== tId); openTniId = tniId; renderTniList(); }
+
+    /* ══ MODALS COMMON ══ */
+    function closeModal(which) { $(`${which}-modal`).classList.remove('open'); }
+
+    /* ══ SAVE ══ */
+    async function saveTramTong() {
+        const maTong = $('ma-tong').value.trim();
+        if (!maTong) { alert('Vui lòng nhập mã trạm tổng.'); return; }
+
+        // flush DOM fields
+        tramNhoList.forEach(item => {
+            const ma  = $(`tni-ma-${item.tempId}`);  if (ma)  item.maNho = ma.value.trim();
+            const ver = $(`tni-ver-${item.tempId}`); if (ver) item.verCT = ver.value.trim();
+        });
+
+        const payload = {
+            maTong,
+            loaiTram:  tongLoaiTram,
+            tenChuTram: tongLoaiTram === 'nhuong-quyen' ? ($('ten-chu-tram').value.trim()) : '',
+            sdtLienHe:  tongLoaiTram === 'nhuong-quyen' ? ($('sdt-lien-he').value.trim())  : '',
+            diaChi:     $('dia-chi').value.trim(),
+            ktvNghiemThu: $('ktv-nghiem-thu').value.trim(),
+            tramNho: tramNhoList.map(item => ({
+                maNho: item.maNho,
+                ipc: item.ipc || null,
+                verCT: item.verCT, loaiTru: item.loaiTru,
+                congSuat: item.congSuat,
+                truMaster: item.truMaster,
+                truSlaves: item.truSlaves,
+            })),
+        };
+
+        try {
+            await apiPost('tram-save.php', payload);
+        } catch (err) {
+            alert('Không lưu được lên máy chủ: ' + err.message);
+            return;
+        }
+
+        clearTong();
+        tramNhoList = []; tniCounter = 0; openTniId = null; renderTniList();
+        alert(`✅ Đã lưu trạm "${maTong}" với ${payload.tramNho.length} mã IPC!`);
+        switchTab('list');
+    }
+
+    /* ══ LIST ══ */
+    function updateBadge() {
+        const n = tramCache.length;
+        $('list-badge').textContent = n;
+        $('list-badge').style.display = n ? '' : 'none';
+    }
+
+    let openTongIds = new Set();
+    let openNhoKeys = new Set();
+
+    function renderList() {
+        const q   = ($('search-tram').value||'').toLowerCase();
+        const arr = tramCache;
+        const fil = q ? arr.filter(r => r.maTong.toLowerCase().includes(q)) : arr;
+        $('list-count').textContent = `${arr.length} trạm tổng đã lưu`;
+        const con = $('tong-list-container');
+        if (!fil.length) { con.innerHTML = `<div class="empty-state"><i>📡</i>${q?'Không tìm thấy.':'Chưa có trạm nào. Hãy thêm mới!'}</div>`; return; }
+
+        con.innerHTML = fil.map((r, idx) => {
+            const stt         = String(idx + 1).padStart(2, '0');
+            const nhoCount    = r.tramNho?.length || 0;
+            const totalTru    = (r.tramNho||[]).reduce((s,n) => s + (n.truMaster?1:0) + (n.truSlaves?.length||0), 0);
+            const totalCongSuat = (r.tramNho||[]).reduce((s,n) => s + (parseInt(n.congSuat)||0), 0);
+            const trangThai   = r.trangThai || 'hoat-dong';
+            const nhoHtml   = (r.tramNho||[]).map((nho, ni) => {
+                const ipcTxt   = nho.ipc?.sn || '—';
+                const truTotal = nho.soLuongTru || (nho.truMaster?1:0) + (nho.truSlaves?.length||0);
+
+                const pdfBadge = t => t.hasNghiemThuPdf
+                    ? `<a class="tru-pill-pdf" href="${API_BASE}/pillar-pdf.php?id=${t.id}&type=nghiem-thu" target="_blank" onclick="event.stopPropagation()" title="Xem PDF nghiệm thu của ${t.pillar}"><i>📄</i> Xem PDF</a>`
+                    : '';
+                const pills = [];
+                if (nho.truMaster) {
+                    const rc = nho.truMaster.result==='Pass'?'pass':nho.truMaster.result==='Fail'?'fail':'';
+                    pills.push(`<span class="tru-pill master"><i style="font-size:8px">⭐</i>${nho.truMaster.pillar}</span>${pdfBadge(nho.truMaster)}`);
+                }
+                (nho.truSlaves||[]).forEach(t => {
+                    const rc = t.result==='Pass'?'pass':t.result==='Fail'?'fail':'';
+                    pills.push(`<span class="tru-pill ${rc}"><i style="font-size:9px">🔌</i>${t.pillar}</span>${pdfBadge(t)}`);
+                });
+                const truHtml = pills.length ? pills.join('') : `<span style="font-size:11px;color:#9ca3af">${truTotal} trụ</span>`;
+
+                const tags = [];
+                if (nho.verCT)   tags.push(`<span style="font-size:11px;background:#f3f4f6;padding:1px 7px;border-radius:6px;color:#374151;font-weight:600">Ver: ${nho.verCT}</span>`);
+                if (nho.loaiTru) tags.push(`<span style="font-size:11px;background:#ede9fe;padding:1px 7px;border-radius:6px;color:#5b21b6;font-weight:600">${nho.loaiTru==='link'?'Link':'Non-link'}</span>`);
+
+                const nhoKey  = `${r.id}-${ni}`;
+                const nhoOpen = openNhoKeys.has(nhoKey);
+                return `<div class="nho-card ${nhoOpen?'open':''}" id="nho-${nhoKey}">
+                    <div class="nho-card-header" onclick="toggleNho('${nhoKey}')">
+                        <i style="color:#0ea5e9;font-size:12px;flex-shrink:0">📍</i>
+                        <span class="nho-ma">${nho.maNho||'(Chưa đặt tên)'}</span>
+                        <span class="tni-badge ipc" style="font-size:10px">${ipcTxt}</span>
+                        <span class="tni-badge tru" style="font-size:10px">${truTotal} trụ</span>
+                        <i class="nho-arrow">▾</i>
+                    </div>
+                    <div class="nho-detail">
+                        <div class="info-grid">
+                            <div class="info-chip"><div class="lbl">Mã IPC</div><div class="val" style="font-family:sans-serif">${nho.maNho||'—'}</div></div>
+                            <div class="info-chip"><div class="lbl">IPC (SN)</div><div class="val">${nho.ipc?.sn||'—'}</div></div>
+                            ${isEngineer() && nho.ipc?.anydesk   ? `<div class="info-chip" style="cursor:pointer" onclick="copyText('${nho.ipc.anydesk}',this)" title="Bấm để copy"><div class="lbl">AnyDesk <i style="opacity:.5">📋</i></div><div class="val">${nho.ipc.anydesk}</div></div>` : ''}
+                            ${isEngineer() && nho.ipc?.ultraview ? `<div class="info-chip" style="cursor:pointer" onclick="copyText('${nho.ipc.ultraview}',this)" title="Bấm để copy"><div class="lbl">UltraView <i style="opacity:.5">📋</i></div><div class="val">${nho.ipc.ultraview}</div></div>` : ''}
+                            ${nho.verCT    ? `<div class="info-chip"><div class="lbl">Ver chương trình</div><div class="val">${nho.verCT}</div></div>` : ''}
+                            ${nho.loaiTru  ? `<div class="info-chip"><div class="lbl">Kết nối</div><div class="val" style="font-family:sans-serif">${nho.loaiTru==='link'?'Link':'Non-link'}</div></div>` : ''}
+                            ${nho.congSuat ? `<div class="info-chip"><div class="lbl">Công suất</div><div class="val" style="font-family:sans-serif">${nho.congSuat} kW</div></div>` : ''}
+                            ${nho.loaiTram ? `<div class="info-chip"><div class="lbl">Loại trạm</div><div class="val" style="font-family:sans-serif">${nho.loaiTram==='nhuong-quyen'?'Nhượng quyền':'Tự doanh'}</div></div>` : ''}
+                        </div>
+                        <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Trụ Sạc (${truTotal})</div>
+                        <div class="tru-pills">${truHtml}</div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            const tongOpen = openTongIds.has(r.id);
+            return `<div class="tong-item ${tongOpen?'open':''}" id="tong-${r.id}">
+                <div class="tong-header" onclick="toggleTong(${r.id})">
+                    <span style="font-size:11px;font-weight:700;color:#9ca3af;background:#f3f4f6;border-radius:6px;padding:2px 7px;flex-shrink:0">${stt}</span>
+                    <i style="color:#0ea5e9;font-size:14px;flex-shrink:0">📡</i>
+                    <span class="tong-ma">${r.maTong}</span>
+                    <span class="tong-badge"><i style="font-size:10px">🗂️</i> ${nhoCount} mã IPC</span>
+                    <span class="tong-badge"><i style="font-size:10px">🔌</i> ${totalTru} trụ</span>
+                    ${r.loaiTram ? `<span class="tong-badge" style="${r.loaiTram==='nhuong-quyen'?'background:#fffbeb;color:#92400e':'background:#f0fdf4;color:#065f46'}">${r.loaiTram==='nhuong-quyen'?'Nhượng quyền':'Tự doanh'}</span>` : ''}
+                    <span class="tong-badge" style="cursor:pointer;${trangThai==='hoat-dong'?'background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0':'background:#fef2f2;color:#991b1b;border:1px solid #fecaca'}" onclick="event.stopPropagation();toggleTrangThai(${r.id})" title="Bấm để đổi trạng thái"><i style="font-size:7px">●</i> ${trangThai==='hoat-dong'?'Đang hoạt động':'Ngừng hoạt động'}</span>
+                    <span class="tong-time">${r.time}</span>
+                    <i class="tong-arrow">▾</i>
+                </div>
+                <div class="tong-detail">
+                    ${r.loaiTram==='nhuong-quyen' && (r.tenChuTram||r.sdtLienHe) ? `
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${r.diaChi||r.ktvNghiemThu?'8px':'12px'}">
+                        ${r.tenChuTram ? `<div class="info-chip" style="flex:1;min-width:140px"><div class="lbl">Chủ trạm</div><div class="val" style="font-family:sans-serif">${r.tenChuTram}</div></div>` : ''}
+                        ${r.sdtLienHe  ? `<div class="info-chip" style="flex:1;min-width:140px"><div class="lbl">SĐT liên hệ</div><div class="val">${r.sdtLienHe}</div></div>` : ''}
+                    </div>` : ''}
+                    ${r.ktvNghiemThu ? `
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:${r.diaChi?'8px':'12px'}">
+                        <div class="info-chip" style="flex:1;min-width:200px"><div class="lbl"><i style="color:#6d28d9;margin-right:3px">✅</i>KTV nghiệm thu</div><div class="val" style="font-family:sans-serif">${r.ktvNghiemThu}</div></div>
+                    </div>` : ''}
+                    ${r.diaChi ? `
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px">
+                        <i style="color:#ef4444;font-size:14px;flex-shrink:0">📍</i>
+                        <span style="flex:1;font-size:13px;color:#374151">${r.diaChi}</span>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.diaChi)}" target="_blank" style="flex-shrink:0;display:inline-flex;align-items:center;gap:5px;background:#ef4444;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;text-decoration:none">
+                            <i>🗺️</i> Bản đồ
+                        </a>
+                    </div>` : ''}
+                    <div class="nho-cards">${nhoHtml||'<div style="color:#9ca3af;font-size:13px;padding:6px">Không có mã IPC</div>'}</div>
+                    <div class="tong-footer">
+                        <button class="btn-delete" onclick="deleteTong(${r.id})"><i>🗑️</i> Xóa trạm này</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function copyText(text, el) {
+        navigator.clipboard.writeText(text).then(() => {
+            const lbl = el.querySelector('.lbl');
+            const orig = lbl.innerHTML;
+            lbl.innerHTML = '<i style="color:#10b981">✅</i> Đã copy!';
+            setTimeout(() => { lbl.innerHTML = orig; }, 1500);
+        });
+    }
+
+    function toggleTong(id) {
+        const el = $(`tong-${id}`);
+        if (!el) return;
+        el.classList.toggle('open');
+        if (el.classList.contains('open')) openTongIds.add(id); else openTongIds.delete(id);
+    }
+
+    async function toggleTrangThai(id) {
+        const rec = tramCache.find(r => r.id === id);
+        if (!rec) return;
+        const newStatus = (rec.trangThai || 'hoat-dong') === 'hoat-dong' ? 'ngung' : 'hoat-dong';
+        try { await apiPost('tram-status.php', { id, status: newStatus }); }
+        catch (err) { alert('Không cập nhật được: ' + err.message); return; }
+        await refreshTramList();
+    }
+    function toggleNho(key) {
+        const el = $(`nho-${key}`);
+        if (!el) return;
+        el.classList.toggle('open');
+        if (el.classList.contains('open')) openNhoKeys.add(key); else openNhoKeys.delete(key);
+    }
+    async function deleteTong(id) {
+        if (!confirm('Xóa trạm này chứ?')) return;
+        try { await apiPost('tram-delete.php', { id }); }
+        catch (err) { alert('Không xóa được: ' + err.message); return; }
+        await refreshTramList();
+    }
+
+    /* ══ UTILS ══ */
+    function esc(s) { return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function cpTxt(text, btn) {
+        navigator.clipboard.writeText(text).then(() => {
+            const o = btn.innerHTML; btn.innerHTML = '✓';
+            setTimeout(() => btn.innerHTML = o, 1500);
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        refreshTramList();
+        const params = new URLSearchParams(location.search);
+        const q = params.get('q');
+        if (q) $('search-tram').value = q;
+        if (params.get('tab') === 'list') switchTab('list');
+        setInterval(() => { if (!document.hidden) refreshTramList(); }, 6000);
+    });
+
+    /* ══ PHIẾU ẢNH (NGHIỆM THU TRỤ SẠC) ══ */
+    function compressImage(base64, maxW = 800, quality = 0.8) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, maxW / img.width);
+                const canvas = document.createElement('canvas');
+                canvas.width  = Math.round(img.width  * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => resolve(base64);
+            img.src = base64;
+        });
+    }
+
+    function dlBlob(blob, name) {
+        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
+        document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    const OT_RPT_DRAFT_PREFIX = 'ot_rpt_draft__'; // mỗi mã trụ 1 phiếu ảnh riêng
+    const OT_LAST_TRU_KEY     = 'ot_rpt_last_tru';
+    const OT_DONVI_KEY        = 'ot_rpt_donvi';   // đơn vị nghiệm thu dùng chung cho cả trạm
+    let currentTruKey = '';
+    let currentTruId    = null; // id (pillar_tests) của trụ đang xem ở Phiếu Ảnh, để gắn PDF nghiệm thu vào đúng trụ
+    let currentTruMaNho = '';   // mã IPC của trạm chứa trụ đang xem, dùng để xếp đúng thư mục con
+    const OT_SLOTS_DEF = [
+        { n:1,  t:'Mặt trước bộ nguồn tổng quan',           d:'Có thông tin cài địa chỉ nguồn.\nTrạng thái LED hoạt động bình thường.' },
+        { n:2,  t:'Mặt sau bộ nguồn tổng quan',             d:'Đã lắp đặt mica.\nKhông có dị vật trên đường busbar.' },
+        { n:3,  t:'Mặt trước trụ tổng quan',                d:'Tổng quan thiết bị không có hư hại.\nHMI và LED đã hoạt động.' },
+        { n:4,  t:'Đường AC/PE Đầu vào',                    d:'Dây đấu nối đúng cực, đánh dấu vị trí siết ốc.\nĐáy tủ đã có foam xịt bịt kín.' },
+        { n:5,  t:'Đường DC In',                            d:'Dây đấu nối đúng cực, đánh dấu vị trí siết ốc.\nKhông có dị vật kẹt trên đường busbar.' },
+        { n:6,  t:'Đường DC Out',                           d:'Dây đấu nối đúng cực, đánh dấu vị trí siết ốc.\nKhông có dị vật kẹt trên đường busbar.' },
+        { n:7,  t:'Dây mạng control box',                   d:'Dây mạng cắm đủ.\nDây mạng được cố định gọn gàng.' },
+        { n:8,  t:'Mặt quạt',                               d:'Không có dị vật kẹt trên cánh quạt.\nQuạt ngoại quan bình thường không hư hại.' },
+        { n:9,  t:'Mặt lọc',                                d:'Có lọc đầy đủ.' },
+        { n:10, t:'Cài đặt relay dòng rò',                  d:'Đã cài ở 30mA dòng rò.' },
+        { n:11, t:'Cài đặt DC Meter / nhiệt độ chạy quạt', d:'Cài đúng thông số điện trở Shunt.\nCài đúng nhiệt độ chạy quạt: 40 độ.' },
+        { n:12, t:'Nametag',                                d:'Rõ mã trụ.' },
+        { n:13, t:'Lắp đặt IPC',                            d:'Vị trí lắp IPC đúng.\nVị trí cắm dây mạng đủ và đúng.' },
+        { n:14, t:'Hình ảnh sạc súng 1',                    d:'Có thông tin phiên sạc.\nThông số phiên sạc đúng yêu cầu của xe.' },
+        { n:15, t:'Hình ảnh sạc súng 2',                    d:'Có thông tin phiên sạc.\nThông số phiên sạc đúng yêu cầu của xe.' },
+        { n:16, t:'Biên bản nghiệm thu',                    d:'Rõ thông tin trên kết quả nghiệm thu.', full:true },
+    ];
+    let otRptImgs = new Array(16).fill(null);
+
+    function otDraftKey(tru) { return OT_RPT_DRAFT_PREFIX + (tru || '').trim().toLowerCase(); }
+
+    function otSaveRptDraft() {
+        if (!currentTruKey) return;
+        const meta = {
+            ipcMaster: $('rpt-ipc-master') ? $('rpt-ipc-master').value : '',
+            ngay:      $('rpt-ngay')       ? $('rpt-ngay').value       : '',
+        };
+        Promise.all(otRptImgs.map(img => img ? compressImage(img, 800, 0.8) : Promise.resolve(null)))
+            .then(compressed => {
+                const key = otDraftKey(currentTruKey);
+                try {
+                    localStorage.setItem(key, JSON.stringify({ meta, images: compressed }));
+                } catch(e) {
+                    console.warn('Không lưu được nháp Phiếu Ảnh (có thể do localStorage đầy), chỉ lưu phần chữ:', e);
+                    try {
+                        const raw  = localStorage.getItem(key);
+                        const prev = raw ? JSON.parse(raw) : {};
+                        localStorage.setItem(key, JSON.stringify({ meta, images: prev.images || [] }));
+                    } catch(_) {}
+                }
+            });
+    }
+
+    function otLoadRptDraft(tru) {
+        const raw = localStorage.getItem(otDraftKey(tru));
+        if (!raw) return;
+        try {
+            const draft = JSON.parse(raw);
+            if (draft.meta) {
+                if (draft.meta.ipcMaster) $('rpt-ipc-master').value = draft.meta.ipcMaster;
+                if (draft.meta.ngay)      $('rpt-ngay').value       = draft.meta.ngay;
+            }
+            if (Array.isArray(draft.images)) {
+                draft.images.forEach((img, i) => { if (img) otRptImgs[i] = img; });
+            }
+        } catch(_) {}
+    }
+
+    function otSaveDonVi() {
+        try { localStorage.setItem(OT_DONVI_KEY, $('rpt-don-vi').value); } catch(_) {}
+    }
+
+    /* Chuyển phiếu sang mã trụ khác — mỗi trụ có ảnh + nháp riêng, không lẫn vào nhau */
+    function otSwitchTru(newTru) {
+        newTru = (newTru || '').trim();
+        if (currentTruKey) otSaveRptDraft();
+        currentTruKey = newTru;
+        otRptImgs = new Array(16).fill(null);
+        $('rpt-ipc-master').value = '';
+        $('rpt-ngay').value = '';
+        if (newTru) {
+            otLoadRptDraft(newTru);
+            try { localStorage.setItem(OT_LAST_TRU_KEY, newTru); } catch(_) {}
+        }
+        if (!$('rpt-ngay').value) $('rpt-ngay').value = new Date().toLocaleDateString('vi-VN');
+        renderOtRptSlots();
+        otUpdateLockState();
+    }
+
+    /* Khóa/mở việc đổi mã trụ ở Phiếu Ảnh: đã chọn 1 trụ thì phải Xuất Phiếu xong
+       mới được đổi sang trụ khác — tránh bỏ dở giữa chừng. */
+    function otUpdateLockState() {
+        const locked = !!currentTruKey;
+        $('rpt-ma-tru').readOnly = locked;
+        $('rpt-tru-picker').disabled = locked;
+    }
+
+    /* Danh sách trụ (Master + Slave) đã nhập ở tab Nhập Liệu cho trạm đang tạo */
+    function getStationTruList() {
+        const list = [];
+        tramNhoList.forEach(item => {
+            if (item.truMaster) list.push({ id: item.truMaster.id, pillar: item.truMaster.pillar, ipcSn: item.ipc?.sn || '', role: 'Master', maNho: item.maNho });
+            (item.truSlaves||[]).forEach(t => list.push({ id: t.id, pillar: t.pillar, ipcSn: item.ipc?.sn || '', role: 'Slave', maNho: item.maNho }));
+        });
+        return list;
+    }
+
+    function renderOtTruPicker() {
+        const sel = $('rpt-tru-picker');
+        if (!sel) return;
+        const list = getStationTruList();
+        sel.innerHTML = '<option value="">— Chọn trụ đã nhập ở Nhập Liệu —</option>' +
+            list.map(t => `<option value="${esc(t.pillar)}">${esc(t.pillar)} (${t.role}${t.maNho ? ' · '+esc(t.maNho) : ''})</option>`).join('');
+    }
+
+    function otPickTru(pillar, id) {
+        if (!pillar) return;
+        const rec = getStationTruList().find(t => t.pillar === pillar);
+        currentTruId = id ?? (rec ? rec.id : null);
+        currentTruMaNho = rec ? (rec.maNho || '') : '';
+        $('rpt-ma-tru').value = pillar;
+        otSwitchTru(pillar);
+        if (!$('rpt-ipc-master').value && rec && rec.ipcSn) $('rpt-ipc-master').value = rec.ipcSn;
+        otSaveRptDraft();
+    }
+
+    function otSyncFromNhapLieu() {
+        $('rpt-ma-tram').value  = $('ma-tong').value.trim();
+        $('rpt-dia-diem').value = $('dia-chi').value.trim();
+    }
+
+    function initOtReportTab() {
+        otSyncFromNhapLieu();
+        renderOtTruPicker();
+
+        const donVi = localStorage.getItem(OT_DONVI_KEY);
+        if (donVi && !$('rpt-don-vi').value) $('rpt-don-vi').value = donVi;
+        if (!$('rpt-don-vi')._rptSaveAttached) { $('rpt-don-vi').addEventListener('input', otSaveDonVi); $('rpt-don-vi')._rptSaveAttached = true; }
+
+        if (!$('rpt-ma-tru').value.trim()) {
+            const lastTru = localStorage.getItem(OT_LAST_TRU_KEY);
+            if (lastTru) $('rpt-ma-tru').value = lastTru;
+        }
+        otSwitchTru($('rpt-ma-tru').value);
+
+        ['rpt-ipc-master','rpt-ngay'].forEach(id => {
+            const el = $(id);
+            if (el && !el._rptSaveAttached) { el.addEventListener('input', otSaveRptDraft); el._rptSaveAttached = true; }
+        });
+    }
+
+    function renderOtRptSlots() {
+        $('rpt-slots').innerHTML = OT_SLOTS_DEF.map((s, i) => `
+            <div class="rpt-slot${s.full ? ' full' : ''}">
+                <div class="rpt-slot-hdr">${s.n}: ${s.t}</div>
+                <div class="rpt-slot-desc">${s.d.replace(/\n/g,'<br>')}</div>
+                <div class="rpt-slot-img">
+                    ${otRptImgs[i]
+                        ? `<img src="${otRptImgs[i]}" alt="">`
+                        : `<div class="rpt-slot-empty"><i>🖼️</i><span>Chưa có ảnh</span></div>`}
+                </div>
+                <div class="rpt-slot-actions">
+                    <button class="btn-pick" onclick="pickOtRptImg(${i})"><i>📂</i> Chọn ảnh</button>
+                    ${otRptImgs[i] ? `<button class="btn-clr" onclick="clearOtRptImg(${i})"><i>✕</i></button>` : ''}
+                </div>
+            </div>`).join('');
+    }
+
+    function pickOtRptImg(i) {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = 'image/*';
+        inp.onchange = () => {
+            if (!inp.files[0]) return;
+            const r = new FileReader();
+            r.onload = e => { otRptImgs[i] = e.target.result; renderOtRptSlots(); otSaveRptDraft(); };
+            r.readAsDataURL(inp.files[0]);
+        };
+        inp.click();
+    }
+
+    function clearOtRptImg(i) { otRptImgs[i] = null; renderOtRptSlots(); otSaveRptDraft(); }
+
+    /* Hộp xác nhận vị trí lưu trước khi thực sự xuất — trả về true/false */
+    function showSaveLocationConfirm(previewPath) {
+        return new Promise(resolve => {
+            $('save-loc-path').textContent = previewPath;
+            $('save-loc-modal').classList.add('open');
+            const okBtn = $('save-loc-ok'), cancelBtn = $('save-loc-cancel');
+            function cleanup() {
+                $('save-loc-modal').classList.remove('open');
+                okBtn.onclick = null; cancelBtn.onclick = null;
+            }
+            okBtn.onclick     = () => { cleanup(); resolve(true); };
+            cancelBtn.onclick = () => { cleanup(); resolve(false); };
+        });
+    }
+
+    async function exportOtReport(event) {
+        const btn = event.currentTarget; // phải lấy TRƯỚC await, vì event sẽ hết hiệu lực sau khi dispatch xong
+        const btnHtml = btn.innerHTML;
+
+        const maTram    = $('rpt-ma-tram').value.trim()    || '—';
+        const maTru     = $('rpt-ma-tru').value.trim()     || '—';
+        const ipcMaster = $('rpt-ipc-master').value.trim() || '—';
+        const donVi     = $('rpt-don-vi').value.trim()     || '—';
+        const diaDiem   = $('rpt-dia-diem').value.trim()   || '—';
+        const ngay      = $('rpt-ngay').value.trim()       || new Date().toLocaleDateString('vi-VN');
+        const safe      = maTru.replace(/[^a-zA-Z0-9\-_]/g, '_');
+        const html      = buildOtRptHTML(maTram, maTru, ipcMaster, donVi, diaDiem, ngay);
+        const images    = OT_SLOTS_DEF
+            .map((s, i) => otRptImgs[i] ? { label: `${String(s.n).padStart(2,'0')}_${s.t}`, dataUrl: otRptImgs[i] } : null)
+            .filter(Boolean);
+
+        // Cấu trúc thư mục: List On Tram / <Mã Trạm> / <Mã IPC của trạm> / <Mã trụ>/
+        const folderPath = [maTram, currentTruMaNho, maTru].filter(Boolean);
+        const previewPath = `List On Tram / ${folderPath.join(' / ')} / Bien_Ban_Nghiem_Thu_${safe}.pdf`;
+        const confirmed = await showSaveLocationConfirm(previewPath);
+        if (!confirmed) return;
+
+        btn.disabled = true; btn.innerHTML = '⏳ Đang xuất PDF...';
+
+        try {
+            const res = await apiPostWithRetry('export-report-pdf.php', {
+                pillar: maTru, folderPath, html, images,
+                baseFolder: 'List On Tram',
+                reportName: 'Bien_Ban_Nghiem_Thu',
+                id: currentTruId, linkColumn: 'nghiem_thu_pdf_path',
+            });
+            alert(`✅ Đã xuất PDF và lưu vào:\n${res.path}`);
+            currentTruKey = ''; // mở khóa, cho phép chuyển sang trụ khác
+            otUpdateLockState();
+            refreshTramList();
+            switchTab('form'); // quay lại Nhập Liệu để nhập tiếp mã IPC/trụ khác
+        } catch (err) {
+            alert(`Không xuất được PDF qua máy chủ:\n${err.message}\n\nSẽ tải file HTML về máy để bạn tự in (Ctrl+P) thay thế.`);
+            dlBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `Bien_Ban_Nghiem_Thu_${safe}.html`);
+        } finally {
+            btn.disabled = false; btn.innerHTML = btnHtml;
+        }
+    }
+
+    function buildOtRptHTML(maTram, maTru, ipcMaster, donVi, diaDiem, ngay) {
+        const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 75" style="width:28mm;height:10mm;display:block;margin:0 auto"><defs><linearGradient id="otrg" x1="0" x2="1"><stop offset="0" stop-color="#dc2626"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs><text y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="#dc2626">R</text><text x="70" y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="url(#otrg)">&amp;</text><text x="140" y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="#2563eb">B</text></svg>`;
+
+        const hdr = () => `
+<table class="hdr"><tr>
+  <td class="logo" rowspan="2">${logoSvg}<span class="co">CÔNG TY TNHH KỸ THUẬT RED &amp; BLUE</span></td>
+  <td class="ttl" rowspan="2"><b>PHIẾU HÌNH ẢNH</b><br><span>NGHIỆM THU TRỤ SẠC</span></td>
+  <td class="ref">Biên bản số: RB-M1603</td>
+</tr><tr>
+  <td class="ref">Phát hành ngày: 02/01/2026</td>
+</tr><tr>
+  <td class="inf"><small>Mã trạm sạc:</small><br><b>${maTram}</b></td>
+  <td class="inf"><small>Mã trụ sạc:</small><br><b>${maTru}</b></td>
+  <td class="inf"><small>IPC Master:</small><br><b>${ipcMaster}</b></td>
+</tr><tr>
+  <td class="inf"><small>Đơn vị nghiệm thu:</small><br><b>${donVi}</b></td>
+  <td class="inf"><small>Địa điểm lắp đặt:</small><br><b>${diaDiem}</b></td>
+  <td class="inf"><small>Ngày tạo phiếu:</small><br><b>${ngay}</b></td>
+</tr></table>`;
+
+        const cell = i => {
+            const s = OT_SLOTS_DEF[i];
+            const img = otRptImgs[i] ? `<img src="${otRptImgs[i]}">` : '<div class="nimg">Chưa có ảnh</div>';
+            return `<td class="sc"><div class="sw"><div class="sh">${s.n}: ${s.t}</div><div class="sd">${s.d.replace(/\n/g,'<br>')}</div><div class="si">${img}</div></div></td>`;
+        };
+
+        const fullCell = i => {
+            const s = OT_SLOTS_DEF[i];
+            const img = otRptImgs[i] ? `<img src="${otRptImgs[i]}">` : '<div class="nimg">Chưa có ảnh</div>';
+            return `<td class="sc" colspan="3"><div class="sw fw"><div class="sh">${s.n}: ${s.t}</div><div class="sd">${s.d}</div><div class="si">${img}</div></div></td>`;
+        };
+
+        const css = `
+@page{size:A4 portrait;margin:10mm}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#fff;font-size:9pt;color:#000}
+.page{width:190mm;margin:0 auto;page-break-after:always}
+.page:last-child{page-break-after:auto}
+.hdr{width:100%;border-collapse:collapse;margin-bottom:2mm}
+.hdr td{border:1px solid #000;padding:3px 6px;vertical-align:middle}
+.logo{width:32mm;text-align:center;padding:5px 4px 3px}
+.co{font-size:6pt;display:block;margin-top:3px;line-height:1.3}
+.ttl{text-align:center;font-size:11pt;line-height:1.5;font-weight:700}
+.ttl span{font-weight:400;font-size:10pt}
+.ref{width:40mm;font-size:8pt;padding:3px 6px}
+.inf{font-size:8pt}
+table.sl{width:100%;border-collapse:collapse;table-layout:fixed}
+.sc{border:1px solid #000;padding:0;vertical-align:top}
+.sw{height:113mm;display:flex;flex-direction:column}
+.sw.fw{height:228mm}
+.sh{background:#1f2937;color:#fff;padding:4px 7px;font-size:8pt;font-weight:700;flex-shrink:0;line-height:1.3;height:11mm;overflow:hidden}
+.sd{padding:4px 7px;font-size:7.5pt;color:#333;background:#f7f7f7;border-bottom:1px solid #ccc;flex-shrink:0;height:17mm;overflow:hidden}
+.si{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#eee;padding:2px}
+.si img{width:100%;height:100%;object-fit:cover}
+.nimg{color:#aaa;font-size:9pt;text-align:center}
+.pgnum{text-align:right;font-size:7pt;color:#888;margin-top:1.5mm}
+@media screen{body{background:#555;padding:15px}.page{background:#fff;padding:10mm;margin:15px auto;box-shadow:0 4px 15px rgba(0,0,0,.3)}}`;
+
+        const p = (c, n) => `<div class="page">${hdr()}<table class="sl">${c}</table><div class="pgnum">Trang ${n} / 4</div></div>`;
+
+        return `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+<title>Phiếu Nghiệm Thu Trụ Sạc - ${maTru}</title>
+<style>${css}</style></head><body>
+${p(`<tr>${cell(0)}${cell(1)}${cell(2)}</tr><tr>${cell(3)}${cell(4)}${cell(5)}</tr>`, 1)}
+${p(`<tr>${cell(6)}${cell(7)}${cell(8)}</tr><tr>${cell(9)}${cell(10)}${cell(11)}</tr>`, 2)}
+${p(`<tr>${cell(12)}${cell(13)}${cell(14)}</tr>`, 3)}
+${p(`<tr>${fullCell(15)}</tr>`, 4)}
+</body></html>`;
+    }
+</script>
+</body>
+</html>

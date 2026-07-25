@@ -1,0 +1,1107 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Trụ Xuất Xưởng - RB CONTROL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #6d28d9;
+            --danger:  #ef4444;
+            --success: #10b981;
+            --bg:      #f4f6f9;
+            --card:    #ffffff;
+            --border:  #e5e7eb;
+            --text:    #1f2937;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* ══ INNER PAGE SHELL ══ */
+        .inner-wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px 40px; }
+
+        .page-topbar {
+            display: flex; align-items: center; gap: 14px;
+            padding: 16px 20px; background: var(--card);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px; position: sticky; top: 0; z-index: 10;
+        }
+        .btn-back {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px;
+            background: none; color: #6b7280; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all .15s;
+        }
+        .btn-back:hover { background: #f3f4f6; color: var(--text); }
+
+        .topbar-icon {
+            width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 15px;
+        }
+        .topbar-title { font-size: 16px; font-weight: 700; color: var(--text); }
+
+        /* ══ TABS ══ */
+        .tabs {
+            display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap;
+            background: var(--card); border-radius: 10px; padding: 5px;
+            border: 1px solid var(--border); width: fit-content; max-width: 100%;
+        }
+        .tab-btn {
+            padding: 8px 20px; border: none; background: none; border-radius: 7px;
+            font-size: 13px; font-weight: 600; cursor: pointer; color: #6b7280;
+            display: flex; align-items: center; gap: 7px; transition: all .2s;
+        }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ══ CARD ══ */
+        .card {
+            background: var(--card); border-radius: 12px; padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,.05); border: 1px solid var(--border);
+        }
+        .card-title {
+            font-size: 15px; font-weight: 600; margin-bottom: 15px; padding-bottom: 10px;
+            border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;
+        }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        /* ══ FORM ══ */
+        .form-group { margin-bottom: 14px; }
+        .form-group > label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #4b5563; text-transform: uppercase; letter-spacing: .4px; }
+        .form-group input[type="text"] {
+            width: 100%; padding: 9px 11px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none;
+        }
+        .form-group input[type="text"]:focus { border-color: var(--primary); }
+        .form-group textarea {
+            width: 100%; padding: 9px 11px; resize: vertical; font-family: inherit;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none;
+        }
+        .form-group textarea:focus { border-color: var(--primary); }
+
+        /* Radio pills */
+        .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .radio-group input[type="radio"] { display: none; }
+        .radio-group label {
+            padding: 6px 16px; border: 1px solid var(--border); border-radius: 20px;
+            font-size: 13px; cursor: pointer; color: #4b5563; transition: all .15s; font-weight: 500;
+        }
+        .radio-group label:hover { border-color: var(--primary); color: var(--primary); }
+        .radio-group input[type="radio"]:checked + label { background: var(--primary); color: #fff; border-color: var(--primary); }
+        #res-pass:checked + label { background: var(--success); border-color: var(--success); }
+        #res-fail:checked + label { background: var(--danger);  border-color: var(--danger); }
+
+        /* Image upload */
+        .image-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .btn-action-img {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 9px 6px; border: 1px dashed var(--primary);
+            background: #f5f3ff; color: var(--primary);
+            border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background .2s;
+        }
+        .btn-action-img:hover { background: #ede9fe; }
+
+        #preview-box { display: none; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #f9fafb; margin-bottom: 12px; }
+        .preview-count { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
+        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px,1fr)); gap: 6px; }
+        .preview-thumb { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .preview-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .preview-thumb .remove-thumb {
+            position: absolute; top: 2px; right: 2px;
+            background: rgba(0,0,0,.55); color: #fff; border: none; border-radius: 50%;
+            width: 18px; height: 18px; font-size: 10px; cursor: pointer; line-height: 18px; text-align: center;
+        }
+
+        .btn-save {
+            width: 100%; background: var(--primary); color: #fff;
+            border: none; padding: 12px; border-radius: 6px;
+            font-weight: 600; cursor: pointer; font-size: 14px; margin-top: 4px;
+        }
+        .btn-save:hover { background: #5b21b6; }
+
+        /* ══ HISTORY SIDEBAR ══ */
+        .history-list { display: flex; flex-direction: column; gap: 6px; max-height: 580px; overflow-y: auto; }
+        .history-item { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; }
+        .h-header { display: flex; align-items: center; gap: 8px; padding: 11px 14px; cursor: pointer; user-select: none; transition: background .15s; }
+        .h-header:hover { background: #f9fafb; }
+        .h-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .h-dot.pass { background: var(--success); }
+        .h-dot.fail { background: var(--danger); }
+        .h-dot.none { background: #d1d5db; }
+        .h-title { font-weight: 600; font-size: 13px; flex: 1; }
+        .h-time  { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+        .h-arrow { color: #9ca3af; font-size: 11px; transition: transform .2s; }
+        .history-item.open .h-arrow { transform: rotate(180deg); }
+        .h-detail { display: none; border-top: 1px solid var(--border); padding: 12px 14px; }
+        .history-item.open .h-detail { display: block; }
+        .h-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .h-field  { background: #f9fafb; border-radius: 6px; padding: 7px 10px; }
+        .h-field .fl { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+        .h-field .fv { font-size: 13px; font-weight: 600; }
+        .h-field .fv.pass { color: var(--success); }
+        .h-field .fv.fail { color: var(--danger); }
+        .h-imgs  { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+        .h-img   { width: 60px; height: 46px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); cursor: pointer; }
+        .h-img-count { font-size: 11px; color: #6b7280; margin-bottom: 8px; }
+        .h-footer { display: flex; justify-content: flex-end; }
+        .btn-delete { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 4px; }
+        .btn-delete:hover { background: #fee2e2; }
+        .btn-open-rpt { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 4px; font-weight: 600; }
+        .btn-open-rpt:hover { background: #ede9fe; }
+
+        /* ══ PILLAR LIST ══ */
+        .pillar-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+        .pillar-count { font-size: 13px; color: #6b7280; }
+        .search-box { padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; width: 240px; }
+        .search-box:focus { border-color: var(--primary); }
+        .pillar-accordion { display: flex; flex-direction: column; gap: 8px; }
+        .pillar-row { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #fff; transition: box-shadow .2s; }
+        .pillar-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .pillar-header { display: flex; align-items: center; gap: 10px; padding: 13px 16px; cursor: pointer; user-select: none; }
+        .pillar-id-label { font-weight: 700; font-size: 14px; flex: 1; }
+        .pillar-badges   { display: flex; gap: 6px; flex-wrap: wrap; }
+        .p-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #ede9fe; color: #5b21b6; font-weight: 600; }
+        .p-badge.pass { background: #d1fae5; color: #065f46; }
+        .p-badge.fail { background: #fee2e2; color: #991b1b; }
+        .p-badge.neutral { background: #f3f4f6; color: #374151; }
+        .p-badge.sent { background: #dbeafe; color: #1e40af; }
+        .p-badge.packed { background: #d1fae5; color: #065f46; }
+        .p-badge.unpacked { background: #fef3c7; color: #92400e; }
+        .ship-status-block { margin: 14px 0; padding: 10px 12px; background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; }
+        .ship-status-lbl { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+        .ship-status-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ship-status-btn {
+            padding: 7px 14px; border: 1px solid var(--border); border-radius: 20px;
+            background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; color: #6b7280; transition: all .15s;
+        }
+        .ship-status-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .ship-status-btn.active.sent { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+        .ship-status-btn.active.packed { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+        .ship-status-btn.active.unpacked { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+        .pillar-time  { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+        .pillar-arrow { color: #9ca3af; font-size: 12px; transition: transform .2s; }
+        .pillar-row.open .pillar-arrow { transform: rotate(180deg); }
+        .pillar-detail { display: none; padding: 0 16px 16px; border-top: 1px solid var(--border); }
+        .pillar-row.open .pillar-detail { display: block; }
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 10px; margin: 14px 0; }
+        .detail-field { background: #f9fafb; border-radius: 8px; padding: 10px 12px; }
+        .detail-field .label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+        .detail-field .value { font-size: 14px; font-weight: 600; color: var(--text); }
+        .detail-field .value.pass { color: var(--success); }
+        .detail-field .value.fail { color: var(--danger); }
+        .detail-imgs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+        .detail-img { width: 90px; height: 68px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; transition: transform .15s; }
+        .detail-img:hover { transform: scale(1.05); }
+        .folder-info { margin-top: 12px; padding: 10px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 12px; color: #166534; }
+        .folder-info i { margin-right: 5px; }
+        .file-names { margin-top: 5px; font-family: monospace; font-size: 11px; color: #374151; line-height: 1.7; }
+        .btn-redownload { margin-top: 10px; padding: 7px 14px; background: #f5f3ff; border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .btn-redownload:hover { background: #ede9fe; }
+        .btn-new { padding: 7px 14px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .btn-new:hover { background: #5b21b6; }
+        .empty-state { text-align: center; color: #9ca3af; padding: 50px 20px; font-size: 14px; }
+        .empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+
+        /* ══ REPORT TAB (Phiếu Ảnh) ══ */
+        .rpt-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; padding: 14px 16px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; }
+        .rpt-lbl  { display: block; font-size: 11px; font-weight: 700; color: #6d28d9; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+        .rpt-meta input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
+        .rpt-meta input:focus { border-color: var(--primary); }
+
+        .rpt-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+        .rpt-slot  { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+        .rpt-slot.full { grid-column: 1 / -1; }
+        .rpt-slot-hdr  { background: #1f2937; color: #fff; padding: 7px 10px; font-size: 12px; font-weight: 700; }
+        .rpt-slot-desc { padding: 6px 10px; font-size: 11px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid var(--border); min-height: 34px; }
+        .rpt-slot-img  { flex: 1; position: relative; background: #f3f4f6; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 170px; }
+        .rpt-slot.full .rpt-slot-img { min-height: 240px; }
+        .rpt-slot-img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+        .rpt-slot-empty { text-align: center; color: #9ca3af; padding: 16px; }
+        .rpt-slot-empty i { font-size: 24px; display: block; margin-bottom: 6px; }
+        .rpt-slot-empty span { font-size: 11px; }
+        .rpt-slot-actions { padding: 8px 10px; display: flex; gap: 6px; border-top: 1px solid var(--border); }
+        .btn-pick { flex: 1; padding: 7px; background: #f5f3ff; border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-pick:hover { background: #ede9fe; }
+        .btn-clr  { padding: 7px 10px; background: #fee2e2; border: 1px solid #fca5a5; color: var(--danger); border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-clr:hover { background: #fecaca; }
+        .rpt-loc-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding: 10px 14px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; font-size: 12px; }
+        #rpt-loc-display { flex: 1; font-family: monospace; font-size: 12px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .btn-export-rpt { width: 100%; background: #059669; color: #fff; border: none; padding: 13px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-export-rpt:hover { background: #047857; }
+
+        /* ══ SAVE MODAL ══ */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 999; align-items: center; justify-content: center; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: #fff; border-radius: 14px; padding: 28px 28px 22px; width: 420px; max-width: 95vw; box-shadow: 0 20px 40px rgba(0,0,0,.2); }
+        .modal-icon { width: 48px; height: 48px; border-radius: 12px; background: #ede9fe; display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--primary); margin-bottom: 16px; }
+        .modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+        .modal-box p  { font-size: 13px; color: #6b7280; margin-bottom: 18px; line-height: 1.5; }
+        .modal-label  { font-size: 12px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+        .modal-input  { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 600; outline: none; color: var(--primary); margin-bottom: 20px; }
+        .modal-input:focus { border-color: var(--primary); }
+        .modal-actions { display: flex; gap: 10px; }
+        .modal-btn-primary { flex: 1; padding: 11px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px; }
+        .modal-btn-primary:hover { background: #5b21b6; }
+        .modal-btn-secondary { padding: 11px 18px; background: #f3f4f6; color: #374151; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .modal-btn-secondary:hover { background: #e5e7eb; }
+
+        @media (max-width: 700px) {
+            .main-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<script src="js/config.js"></script>
+<script>
+    (function () {
+        function requireLogin() {
+            if (!localStorage.getItem('user')) window.location.replace('login.html');
+        }
+        requireLogin();
+        window.addEventListener('pageshow', function (e) { if (e.persisted) requireLogin(); });
+    })();
+</script>
+
+<div class="page-topbar">
+    <button class="btn-back" onclick="window.location.href='dashboard.html'">
+        <i>←</i> Quay lại
+    </button>
+    <div class="topbar-icon" style="background:linear-gradient(135deg,#6d28d9,#8b5cf6)">
+        <i>🔌</i>
+    </div>
+    <span class="topbar-title">Test trụ xuất xưởng</span>
+</div>
+
+<div class="inner-wrap">
+    <div class="tabs">
+        <button class="tab-btn active" id="btn-tab-form" onclick="switchTab('form')">
+            <i>✏️</i> Nhập Liệu
+        </button>
+        <button class="tab-btn" id="btn-tab-list" onclick="switchTab('list')">
+            <i>📋</i> Danh Sách Trụ
+            <span id="list-badge" style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;display:none"></span>
+        </button>
+        <button class="tab-btn" id="btn-tab-report" onclick="switchTab('report')">
+            <i>🖼️</i> Phiếu Ảnh
+        </button>
+    </div>
+
+    <!-- TAB 1: Form + History -->
+    <div id="tab-form" class="tab-content active">
+        <div class="main-layout">
+            <div class="card">
+                <div class="card-title"><i>✏️</i> Tạo Phiếu Kiểm Tra</div>
+                <form id="test-form">
+                    <div class="form-group">
+                        <label for="pillar-id">Mã số Trụ sạc</label>
+                        <input type="text" id="pillar-id" placeholder="Ví dụ: RB-BD-001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Model</label>
+                        <div class="radio-group">
+                            <input type="radio" name="model" id="model-60" value="60">
+                            <label for="model-60">60</label>
+                            <input type="radio" name="model" id="model-120" value="120">
+                            <label for="model-120">120</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Loại nguồn</label>
+                        <div class="radio-group">
+                            <input type="radio" name="source" id="src-phoenix" value="Phoenix">
+                            <label for="src-phoenix">Phoenix</label>
+                            <input type="radio" name="source" id="src-maxwell" value="Maxwell">
+                            <label for="src-maxwell">Maxwell</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nơi sản xuất</label>
+                        <div class="radio-group">
+                            <input type="radio" name="factory" id="fac-vietan" value="Việt Tân">
+                            <label for="fac-vietan">Việt Tân</label>
+                            <input type="radio" name="factory" id="fac-mee" value="Mee">
+                            <label for="fac-mee">Mee</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="ver-screen">Ver màn hình</label>
+                        <input type="text" id="ver-screen" placeholder="Ví dụ: v1.2.3">
+                    </div>
+                    <div class="form-group">
+                        <label for="tester">Người test</label>
+                        <input type="text" id="tester" placeholder="Nhập tên người thực hiện" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kết quả</label>
+                        <div class="radio-group">
+                            <input type="radio" name="result" id="res-pass" value="Pass">
+                            <label for="res-pass">✓ Pass</label>
+                            <input type="radio" name="result" id="res-fail" value="Fail">
+                            <label for="res-fail">✗ Fail</label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="fail-reason-group" style="display:none">
+                        <label for="fail-reason">Nguyên nhân</label>
+                        <textarea id="fail-reason" rows="3" placeholder="Nhập nguyên nhân lỗi..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Hình ảnh kiểm tra thực tế</label>
+                        <div class="image-actions">
+                            <div class="btn-action-img" onclick="document.getElementById('camera-input').click()">
+                                <i>📷</i> Chụp ảnh
+                            </div>
+                            <div class="btn-action-img" onclick="document.getElementById('files-input').click()">
+                                <i>📸</i> Nhiều ảnh
+                            </div>
+                            <div class="btn-action-img" onclick="document.getElementById('folder-input').click()">
+                                <i>📂</i> Cả thư mục
+                            </div>
+                        </div>
+                        <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
+                        <input type="file" id="files-input" accept="image/*" multiple hidden>
+                        <input type="file" id="folder-input" accept="image/*" webkitdirectory multiple hidden>
+                        <div id="preview-box">
+                            <div class="preview-count" id="preview-count"></div>
+                            <div class="preview-grid" id="preview-grid"></div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-save" id="btn-save">
+                        <i>💾</i> Lưu &amp; Xem Danh Sách Trụ
+                    </button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i>🕘</i> Lịch Sử Đã Lưu</div>
+                <div class="history-list" id="history-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: Pillar list -->
+    <div id="tab-list" class="tab-content">
+        <div class="card">
+            <div class="pillar-toolbar">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div class="pillar-count" id="pillar-count"></div>
+                    <button class="btn-new" onclick="switchTab('form')">
+                        <i>➕</i> Tạo phiếu mới
+                    </button>
+                </div>
+                <input class="search-box" type="text" id="search-box" placeholder="🔍  Tìm mã trụ..." oninput="renderPillarList()">
+            </div>
+            <div class="pillar-accordion" id="pillar-accordion"></div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Phiếu Ảnh -->
+    <div id="tab-report" class="tab-content">
+        <div class="rpt-meta">
+            <div><label class="rpt-lbl">Đơn vị gia công</label><input type="text" id="rpt-factory" placeholder="Ví dụ: Viet Tan"></div>
+            <div><label class="rpt-lbl">Mã trụ sạc</label><input type="text" id="rpt-pillar" placeholder="RBM12026..."></div>
+            <div><label class="rpt-lbl">Ngày tạo phiếu</label><input type="text" id="rpt-date" placeholder="17/07/2026"></div>
+        </div>
+        <div class="rpt-loc-bar">
+            <i style="font-size:14px;flex-shrink:0">ℹ️</i>
+            <span style="font-weight:700;color:#6d28d9;white-space:nowrap;flex-shrink:0">Vị trí lưu:</span>
+            <span>PDF sẽ tự lưu vào đúng thư mục "Charge Point" của mã trụ này khi xuất.</span>
+        </div>
+        <div class="rpt-slots" id="rpt-slots"></div>
+        <button class="btn-export-rpt" onclick="exportReport(event)">
+            <i>📥</i> Xuất Phiếu
+        </button>
+    </div>
+</div>
+
+<!-- Save location modal -->
+<div class="modal-overlay" id="save-modal">
+    <div class="modal-box">
+        <div class="modal-icon"><i>📂</i></div>
+        <h3>Đặt tên thư mục</h3>
+        <p>Ảnh sẽ được lưu ngay trên máy này, trong thư mục <strong>Charge Point</strong> bạn đã chọn.</p>
+        <div class="modal-label">Tên thư mục</div>
+        <input class="modal-input" type="text" id="modal-folder-name" placeholder="Tên thư mục...">
+        <div id="modal-server-status" style="font-size:12px;color:#6b7280;margin:-10px 0 18px"></div>
+        <div class="modal-actions">
+            <button class="modal-btn-secondary" id="modal-btn-cancel">Hủy</button>
+            <button class="modal-btn-primary" id="modal-btn-pick">
+                <i>💾</i> Lưu
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    /* ─── API (Flask backend — URL cấu hình trong js/config.js) ─── */
+    const CHARGE_POINT_NAME = 'Charge Point';
+
+    async function apiGet(path) {
+        const res  = await fetch(`${API_BASE}/${path}`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+    function getCurrentUsername() {
+        try { return JSON.parse(localStorage.getItem('user') || '{}').username || 'unknown'; }
+        catch (_) { return 'unknown'; }
+    }
+    async function apiPost(path, body) {
+        const res = await fetch(`${API_BASE}/${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Username': getCurrentUsername() },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+
+    /* Server backend đôi lúc tự khởi động lại (khi có cập nhật code) làm rớt đúng
+       request đang chạy ("Failed to fetch") dù không phải lỗi thật — tự thử lại
+       vài lần trước khi báo lỗi cho người dùng, dành cho các thao tác quan trọng
+       như xuất PDF. */
+    async function apiPostWithRetry(path, body, retries = 3, delayMs = 1500) {
+        for (let attempt = 0; ; attempt++) {
+            try {
+                return await apiPost(path, body);
+            } catch (err) {
+                const isNetworkErr = err instanceof TypeError || /Failed to fetch/i.test(err.message || '');
+                if (!isNetworkErr || attempt >= retries) throw err;
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+        }
+    }
+
+    /* Metadata (không kèm ảnh) được lưu vào MySQL để mọi máy thấy chung danh sách.
+       Ảnh thật thì lưu ngay trên máy người dùng đang bấm nút, xem phần "Lưu ảnh cục bộ" bên dưới. */
+    function saveMetaToServer(folderLabel, fileNames, info) {
+        return apiPost('save-pillar.php', { folderLabel, fileNames, info });
+    }
+
+    /* ─── Lưu ảnh cục bộ trên máy người dùng (File System Access API) ─── */
+    const IDB_DB_NAME  = 'evse_fs_handles';
+    const IDB_STORE     = 'handles';
+    const IDB_ROOT_KEY  = 'eolRootHandle';
+    let eolRootHandle = null;
+
+    function idbOpen() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(IDB_DB_NAME, 1);
+            req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+    async function idbSet(key, value) {
+        const db = await idbOpen();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put(value, key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    }
+    async function idbGet(key) {
+        const db = await idbOpen();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const req = tx.objectStore(IDB_STORE).get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function verifyPermission(handle, mode = 'readwrite') {
+        const opts = { mode };
+        if ((await handle.queryPermission(opts)) === 'granted') return true;
+        try { if ((await handle.requestPermission(opts)) === 'granted') return true; } catch (_) {}
+        return false;
+    }
+
+    /* Trả về handle thư mục "Charge Point" NGAY TRÊN MÁY ĐANG DÙNG (chính là thư mục
+       người dùng đã chọn, không tạo thêm thư mục con nào nữa).
+       Chỉ hỏi chọn thư mục 1 lần/máy (hoặc khi bấm "Đổi thư mục"), sau đó tự nhớ. */
+    async function getChargePointHandle({ forcePick = false } = {}) {
+        if (!forcePick) {
+            if (!eolRootHandle) {
+                try { eolRootHandle = await idbGet(IDB_ROOT_KEY); } catch (_) {}
+            }
+            if (eolRootHandle && await verifyPermission(eolRootHandle)) {
+                return eolRootHandle;
+            }
+        }
+        const picked = await window.showDirectoryPicker({ mode: 'readwrite' });
+        eolRootHandle = picked;
+        try { await idbSet(IDB_ROOT_KEY, picked); } catch (_) {}
+        return picked;
+    }
+
+    function base64ToBlob(base64) {
+        const [header, data] = base64.split(',');
+        const mime = header.match(/:(.*?);/)[1];
+        const bytes = atob(data);
+        const arr = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+        return new Blob([arr], { type: mime });
+    }
+
+    /* ─── Bộ nhớ dùng chung: danh sách trụ lấy từ MySQL, mọi máy thấy như nhau ─── */
+    let historyCache = [];
+    async function fetchHistory() {
+        const data = await apiGet('history.php');
+        historyCache = data.items || [];
+        return historyCache;
+    }
+    async function refreshHistoryData() {
+        try { await fetchHistory(); } catch (err) { console.error(err); }
+        loadHistory();
+        updateBadge();
+        if ($('tab-list').classList.contains('active')) renderPillarList();
+    }
+
+    /* ─── Tab switching (Test Trụ) ─── */
+    function switchTab(name) {
+        ['form','list','report'].forEach(t => {
+            $(`tab-${t}`).classList.toggle('active', t === name);
+            $(`btn-tab-${t}`).classList.toggle('active', t === name);
+        });
+        if (name === 'list')   refreshHistoryData();
+        if (name === 'report') initReportTab();
+    }
+
+    /* ─── Preview images ─── */
+    const previewBox   = $('preview-box');
+    const previewGrid  = $('preview-grid');
+    const previewCount = $('preview-count');
+    let selectedImages = [];
+
+    function readFiles(fileList) {
+        const imgs = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+        if (!imgs.length) return;
+        Promise.all(imgs.map(file => new Promise(resolve => {
+            const r = new FileReader();
+            r.onload = e => resolve({ base64: e.target.result, name: file.name });
+            r.readAsDataURL(file);
+        }))).then(results => { selectedImages.push(...results); renderPreview(); });
+    }
+
+    function renderPreview() {
+        if (!selectedImages.length) { previewBox.style.display = 'none'; return; }
+        previewBox.style.display = 'block';
+        previewCount.textContent = `${selectedImages.length} ảnh đã chọn`;
+        previewGrid.innerHTML = selectedImages.map((img, i) => `
+            <div class="preview-thumb">
+                <img src="${img.base64}" alt="${img.name}">
+                <button class="remove-thumb" onclick="removeImage(${i})">✕</button>
+            </div>
+        `).join('');
+    }
+
+    function removeImage(i) { selectedImages.splice(i, 1); renderPreview(); }
+
+    /* ─── Fail reason toggle ─── */
+    function toggleFailReason() {
+        const isFail = $('res-fail').checked;
+        $('fail-reason-group').style.display = isFail ? 'block' : 'none';
+        if (!isFail) $('fail-reason').value = '';
+    }
+    document.querySelectorAll('input[name="result"]').forEach(r => r.addEventListener('change', toggleFailReason));
+
+    [$('camera-input'), $('files-input'), $('folder-input')].forEach(input => {
+        input.addEventListener('change', function () { readFiles(this.files); this.value = ''; });
+    });
+
+    /* ─── Helpers ─── */
+    function compressImage(base64, maxW = 200, quality = 0.65) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, maxW / img.width);
+                const canvas = document.createElement('canvas');
+                canvas.width  = Math.round(img.width  * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => resolve(base64);
+            img.src = base64;
+        });
+    }
+
+    function setSaveBtn(loading) {
+        const btn = $('btn-save');
+        btn.disabled = loading;
+        btn.innerHTML = loading
+            ? '⏳ Đang lưu...'
+            : '<i>💾</i> Lưu & Xem Danh Sách Trụ';
+    }
+
+    function showSaveDialog(suggestedName) {
+        return new Promise((resolve, reject) => {
+            const modal     = $('save-modal');
+            const nameInput = $('modal-folder-name');
+            const btnPick   = $('modal-btn-pick');
+            const btnCancel = $('modal-btn-cancel');
+            const statusBox = $('modal-server-status');
+
+            nameInput.value = suggestedName;
+            modal.classList.add('open');
+            nameInput.focus(); nameInput.select();
+
+            function renderStatus() {
+                if (eolRootHandle) {
+                    statusBox.innerHTML = `<span style="color:#059669"><i>✅</i> Sẽ lưu vào máy này: <strong>${eolRootHandle.name}</strong></span> <a href="#" id="modal-change-root" style="color:var(--primary);font-weight:600;margin-left:6px">Đổi thư mục</a>`;
+                } else {
+                    statusBox.innerHTML = `<span style="color:#d97706"><i>ℹ️</i> Lần đầu trên máy này: hãy chọn thư mục "${CHARGE_POINT_NAME}" khi bấm Lưu</span>`;
+                }
+                const changeLink = $('modal-change-root');
+                if (changeLink) changeLink.onclick = async (e) => {
+                    e.preventDefault();
+                    try { await getChargePointHandle({ forcePick: true }); renderStatus(); } catch (_) {}
+                };
+            }
+            renderStatus();
+
+            btnPick.onclick = () => {
+                const folderName = nameInput.value.trim() || suggestedName;
+                modal.classList.remove('open');
+                resolve({ folderName });
+            };
+
+            btnCancel.onclick = () => {
+                modal.classList.remove('open');
+                reject(new DOMException('User cancelled', 'AbortError'));
+            };
+        });
+    }
+
+    /* ─── Form submit (Test Trụ) ─── */
+    $('test-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const radio = name => (document.querySelector(`input[name="${name}"]:checked`) || {}).value || '';
+        const pillar  = $('pillar-id').value.trim();
+        const tester  = $('tester').value.trim();
+        const ver     = $('ver-screen').value.trim();
+        const model   = radio('model');
+        const source  = radio('source');
+        const factory = radio('factory');
+        const result  = radio('result');
+        const reason  = result === 'Fail' ? $('fail-reason').value.trim() : '';
+
+        const d = new Date();
+        const time = `${d.toLocaleDateString('vi-VN')} ${d.toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit' })}`;
+        const prefix = pillar.replace(/[^a-zA-Z0-9\-_]/g, '_');
+
+        setSaveBtn(true);
+        let chosenName;
+        try {
+            ({ folderName: chosenName } = await showSaveDialog(prefix));
+        } catch (err) {
+            setSaveBtn(false);
+            return; // người dùng bấm Hủy
+        }
+
+        const safeName    = chosenName.replace(/[<>:"/\\|?*]/g, '_');
+        const infoPayload = { pillar, model, source, factory, ver, tester, result, reason, time, soAnh: selectedImages.length };
+        let fileNames   = selectedImages.map((_, i) => `${safeName}_${i + 1}.jpg`);
+        let folderLabel = 'Downloads (mặc định)';
+
+        if (window.showDirectoryPicker) {
+            try {
+                const chargePointHandle = await getChargePointHandle();
+                const subHandle = await chargePointHandle.getDirectoryHandle(safeName, { create: true });
+                const imgNames  = selectedImages.map((_, i) => `${safeName}_${i + 1}.jpg`);
+                for (let i = 0; i < selectedImages.length; i++) {
+                    const fh = await subHandle.getFileHandle(imgNames[i], { create: true });
+                    const w  = await fh.createWritable();
+                    await w.write(base64ToBlob(selectedImages[i].base64));
+                    await w.close();
+                }
+                const infoName = `${safeName}_info.json`;
+                const infoFh   = await subHandle.getFileHandle(infoName, { create: true });
+                const infoW    = await infoFh.createWritable();
+                await infoW.write(new Blob([JSON.stringify(infoPayload, null, 2)], { type: 'application/json' }));
+                await infoW.close();
+                folderLabel = `${eolRootHandle.name} / ${safeName}`;
+                fileNames   = [...imgNames, infoName];
+            } catch (err) {
+                if (err.name === 'AbortError') { setSaveBtn(false); return; }
+                selectedImages.forEach((img, i) => { setTimeout(() => { const a = Object.assign(document.createElement('a'), { href: img.base64, download: fileNames[i] }); document.body.appendChild(a); a.click(); a.remove(); }, i * 300); });
+                folderLabel = 'Downloads (mặc định - không ghi được vào thư mục đã chọn)';
+            }
+        } else {
+            alert('Trình duyệt không hỗ trợ chọn thư mục.\nẢnh sẽ tự tải về Downloads.');
+            selectedImages.forEach((img, i) => { setTimeout(() => { const a = Object.assign(document.createElement('a'), { href: img.base64, download: fileNames[i] }); document.body.appendChild(a); a.click(); a.remove(); }, i * 300); });
+        }
+
+        let saveRes;
+        try {
+            saveRes = await saveMetaToServer(safeName, fileNames, infoPayload);
+        } catch (err) {
+            setSaveBtn(false);
+            alert(`Ảnh đã lưu trên máy này, nhưng KHÔNG ghi được vào danh sách chung (MySQL):\n${err.message}\n\nHãy kiểm tra XAMPP (Apache/MySQL) rồi bấm Lưu lại.`);
+            return;
+        }
+
+        this.reset(); selectedImages = []; renderPreview(); toggleFailReason(); setSaveBtn(false);
+        await refreshHistoryData();
+        currentReportFolder = safeName;
+        currentReportRecordId = saveRes.id;
+        switchTab('report');
+        $('rpt-pillar').value  = pillar;
+        $('rpt-factory').value = factory;
+        $('rpt-date').value    = time.split(' ')[0];
+    });
+
+    /* ─── History sidebar ─── */
+    function loadHistory() {
+        const container = $('history-container');
+        if (!historyCache.length) { container.innerHTML = '<p style="text-align:center;color:#9ca3af;margin-top:30px;font-size:13px;">Chưa có dữ liệu nào được lưu.</p>'; return; }
+        container.innerHTML = historyCache.map(item => {
+            const rc = item.result === 'Pass' ? 'pass' : item.result === 'Fail' ? 'fail' : 'none';
+            const fieldList = [
+                { l: 'Model', v: item.model || '—', cls: '' }, { l: 'Loại nguồn', v: item.source || '—', cls: '' },
+                { l: 'Nơi SX', v: item.factory || '—', cls: '' }, { l: 'Ver màn hình', v: item.ver || '—', cls: '' },
+                { l: 'Người test', v: item.tester || '—', cls: '' }, { l: 'Kết quả', v: item.result || '—', cls: rc },
+            ];
+            if (item.result === 'Fail' && item.reason) fieldList.push({ l: 'Nguyên nhân', v: item.reason, cls: 'fail' });
+            const fields = fieldList.map(f => `<div class="h-field"><div class="fl">${f.l}</div><div class="fv ${f.cls}">${f.v}</div></div>`).join('');
+            return `<div class="history-item" id="hist-${item.id}">
+                <div class="h-header" onclick="toggleHist(${item.id})">
+                    <div class="h-dot ${rc}"></div><div class="h-title">${item.pillar}</div>
+                    <div class="h-time">${item.time}</div><i class="h-arrow">▾</i>
+                </div>
+                <div class="h-detail">
+                    <div class="h-fields">${fields}</div>
+                    <div class="h-footer">
+                        <button class="btn-open-rpt" onclick="openRptForRecord(${item.id})"><i>🖼️</i> Phiếu Ảnh</button>
+                        <button class="btn-delete" onclick="deleteRecord(${item.id})"><i>🗑️</i> Xóa</button>
+                    </div>
+                </div></div>`;
+        }).join('');
+    }
+
+    function toggleHist(id) { $(`hist-${id}`).classList.toggle('open'); }
+    async function deleteRecord(id) {
+        if (!confirm('Xóa phiếu kiểm tra này chứ bro?')) return;
+        try { await apiPost('delete.php', { id }); } catch (err) { alert('Không xóa được: ' + err.message); return; }
+        await refreshHistoryData();
+    }
+    function openRptForRecord(id) {
+        const item = historyCache.find(r => r.id === id);
+        if (!item) return;
+        currentReportFolder = item.folderName || '';
+        currentReportRecordId = id;
+        switchTab('report');
+        $('rpt-pillar').value  = item.pillar  || '';
+        $('rpt-factory').value = item.factory || '';
+        $('rpt-date').value    = item.time ? item.time.split(' ')[0] : '';
+    }
+
+    /* ─── Pillar list ─── */
+    let openPillarRows = new Set();
+    function renderPillarList() {
+        const q = ($('search-box').value || '').toLowerCase();
+        const filtered = q ? historyCache.filter(item => item.pillar.toLowerCase().includes(q)) : historyCache;
+        $('pillar-count').textContent = `${filtered.length} / ${historyCache.length} trụ`;
+        const container = $('pillar-accordion');
+        if (!filtered.length) { container.innerHTML = `<div class="empty-state"><i>📭</i>${q ? 'Không tìm thấy trụ nào khớp.' : 'Chưa có dữ liệu. Hãy nhập phiếu kiểm tra đầu tiên!'}</div>`; return; }
+        container.innerHTML = filtered.map(item => {
+            const rc = item.result === 'Pass' ? 'pass' : item.result === 'Fail' ? 'fail' : 'neutral';
+            const detailFieldList = [
+                { label: 'Model', value: item.model || '—', cls: '' }, { label: 'Loại nguồn', value: item.source || '—', cls: '' },
+                { label: 'Nơi sản xuất', value: item.factory || '—', cls: '' }, { label: 'Ver màn hình', value: item.ver || '—', cls: '' },
+                { label: 'Người test', value: item.tester || '—', cls: '' }, { label: 'Kết quả', value: item.result || '—', cls: rc },
+                { label: 'Thời gian', value: item.time, cls: '' },
+            ];
+            if (item.result === 'Fail' && item.reason) detailFieldList.push({ label: 'Nguyên nhân', value: item.reason, cls: 'fail' });
+            const detailFields = detailFieldList.map(f => `<div class="detail-field"><div class="label">${f.label}</div><div class="value ${f.cls}">${f.value}</div></div>`).join('');
+            const shipLabels = { sent: 'Đã gửi đi', packed: 'Đã đóng gói', unpacked: 'Chưa đóng gói' };
+            const folderLabel = item.folderName ? `<i>📂</i> <strong>${item.folderName}</strong>` : '<i>📁</i> Downloads (mặc định)';
+            const fileSection = item.fileNames && item.fileNames.length
+                ? `<div class="folder-info"><div>${folderLabel}</div><div class="file-names">${item.fileNames.join('<br>')}</div></div>` : '';
+            return `<div class="pillar-row" id="row-${item.id}">
+                <div class="pillar-header" onclick="toggleRow(${item.id})">
+                    <div class="pillar-id-label"><i style="margin-right:6px;font-size:13px">🔌</i>${item.pillar}</div>
+                    <div class="pillar-badges">
+                        ${item.model  ? `<span class="p-badge">Model ${item.model}</span>` : ''}
+                        ${item.source ? `<span class="p-badge neutral">${item.source}</span>` : ''}
+                        ${item.result ? `<span class="p-badge ${rc}">${item.result === 'Pass' ? '✓' : '✗'} ${item.result}</span>` : ''}
+                        ${item.shipStatus ? `<span class="p-badge ${item.shipStatus}">${shipLabels[item.shipStatus]}</span>` : ''}
+                        ${item.hasPdf ? `<span class="p-badge" style="background:#fee2e2;color:#b91c1c"><i>📄</i> PDF</span>` : ''}
+                    </div>
+                    <div class="pillar-time">${item.time}</div>
+                    <i class="pillar-arrow">▾</i>
+                </div>
+                <div class="pillar-detail">
+                    <div class="ship-status-block">
+                        <div class="ship-status-lbl">Trạng thái trụ</div>
+                        <div class="ship-status-group">
+                            <button type="button" class="ship-status-btn${item.shipStatus==='sent' ? ' active sent' : ''}" data-status="sent" onclick="setShipStatus(${item.id},'sent')"><i>🚚</i> Đã gửi đi</button>
+                            <button type="button" class="ship-status-btn${item.shipStatus==='packed' ? ' active packed' : ''}" data-status="packed" onclick="setShipStatus(${item.id},'packed')"><i>📦</i> Đã đóng gói</button>
+                            <button type="button" class="ship-status-btn${item.shipStatus==='unpacked' ? ' active unpacked' : ''}" data-status="unpacked" onclick="setShipStatus(${item.id},'unpacked')"><i>🔓</i> Chưa đóng gói</button>
+                        </div>
+                    </div>
+                    <div class="detail-grid">${detailFields}</div>
+                    ${fileSection}
+                    <div class="h-footer" style="margin-top:8px">
+                        ${item.hasPdf ? `<button class="btn-open-rpt" onclick="viewPillarPdf(${item.id})"><i>📄</i> Xem PDF</button>` : ''}
+                        <button class="btn-open-rpt" onclick="openRptForRecord(${item.id})"><i>🖼️</i> Phiếu Ảnh</button>
+                        <button class="btn-delete" onclick="deleteRecord(${item.id})"><i>🗑️</i> Xóa</button>
+                    </div>
+                </div></div>`;
+        }).join('');
+        openPillarRows.forEach(id => { const row = $(`row-${id}`); if (row) row.classList.add('open'); });
+    }
+
+    function viewPillarPdf(id) {
+        window.open(`${API_BASE}/pillar-pdf.php?id=${id}`, '_blank');
+    }
+
+    function toggleRow(id) {
+        const row = $(`row-${id}`);
+        row.classList.toggle('open');
+        if (row.classList.contains('open')) openPillarRows.add(id); else openPillarRows.delete(id);
+    }
+
+    async function setShipStatus(id, status) {
+        const item = historyCache.find(r => r.id === id);
+        if (!item) return;
+        const oldStatus = item.shipStatus;
+        const newStatus = oldStatus === status ? '' : status;
+
+        // Optimistic UI: cập nhật giao diện ngay, không chờ server phản hồi
+        item.shipStatus = newStatus;
+        renderPillarList();
+
+        try {
+            await apiPost('ship-status.php', { id, status: newStatus });
+        } catch (err) {
+            item.shipStatus = oldStatus;
+            renderPillarList();
+            alert('Không cập nhật được: ' + err.message);
+        }
+    }
+
+    function updateBadge() {
+        const count = historyCache.length;
+        const badge = $('list-badge');
+        badge.style.display = count ? '' : 'none';
+        badge.textContent = count;
+    }
+
+    /* ─── Phiếu Ảnh ─── */
+    const RPT_DRAFT_KEY = 'rpt_draft';
+    const SLOTS_DEF = [
+        { n:1,  t:'Mặt trước bộ nguồn tổng quan',           d:'Có thông tin cài địa chỉ nguồn.\nTrạng thái LED hoạt động bình thường.' },
+        { n:2,  t:'Mặt sau bộ nguồn tổng quan',             d:'Lắp đủ ferrit.\nKhông có dị vật trên đường busbar.' },
+        { n:3,  t:'Mặt trước trụ tổng quan',                d:'Tổng quan thiết bị không có hư hại.\nHMI và LED đã hoạt động.' },
+        { n:4,  t:'Đường AC/PE Đầu vào',                    d:'Dây đấu nối đúng cực, đánh dấu vị trí siết ốc.' },
+        { n:5,  t:'Đấu nối mặt sau Control Box',            d:'Dây đấu gọn.\nĐấu đúng chân, không lỏng lẻo.' },
+        { n:6,  t:'Mặt quạt',                               d:'Không có dị vật kẹt trên cánh quạt.\nQuạt ngoại quan bình thường không hư hại.' },
+        { n:7,  t:'Mặt lọc',                                d:'Có lọc đầy đủ.' },
+        { n:8,  t:'Cài đặt relay dòng rò',                  d:'Đã cài ở 30mA dòng rò.' },
+        { n:9,  t:'Cài đặt DC Meter / nhiệt độ chạy quạt', d:'Cài đúng thông số điện trở Shunt.\nCài đúng nhiệt độ chạy quạt: 40 độ.' },
+        { n:10, t:'Hình ảnh sạc súng 1',                    d:'Có thông tin phiên sạc.\nThông số phiên sạc đúng yêu cầu của xe.' },
+        { n:11, t:'Hình ảnh sạc súng 2',                    d:'Có thông tin phiên sạc.\nThông số phiên sạc đúng yêu cầu của xe.' },
+        { n:12, t:'Nametag',                                d:'Rõ mã trụ.' },
+        { n:13, t:'Check List test Control Box',            d:'Rõ thông tin trên kết quả nghiệm thu.', full:true },
+        { n:14, t:'Check List test EOL',                    d:'Rõ thông tin trên kết quả nghiệm thu.', full:true },
+    ];
+    let rptImgs = new Array(14).fill(null);
+    let currentReportFolder = null;   // tên thư mục "Charge Point/<...>" đã dùng khi lưu ảnh test trụ của mã trụ đang xem
+    let currentReportRecordId = null; // id bản ghi pillar_tests đang xem ở tab Phiếu Ảnh, để gắn PDF vào đúng trụ
+
+    function saveRptDraft() {
+        const meta = {
+            factory: $('rpt-factory') ? $('rpt-factory').value : '',
+            pillar:  $('rpt-pillar')  ? $('rpt-pillar').value  : '',
+            date:    $('rpt-date')    ? $('rpt-date').value    : '',
+        };
+        Promise.all(rptImgs.map(img => img ? compressImage(img, 800, 0.8) : Promise.resolve(null)))
+            .then(compressed => {
+                try {
+                    localStorage.setItem(RPT_DRAFT_KEY, JSON.stringify({ meta, images: compressed }));
+                } catch(e) {
+                    console.warn('Không lưu được nháp Phiếu Ảnh (có thể do localStorage đầy), chỉ lưu phần chữ:', e);
+                    try {
+                        const raw  = localStorage.getItem(RPT_DRAFT_KEY);
+                        const prev = raw ? JSON.parse(raw) : {};
+                        localStorage.setItem(RPT_DRAFT_KEY, JSON.stringify({ meta, images: prev.images || [] }));
+                    } catch(_) {}
+                }
+            });
+    }
+
+    function loadRptDraft() {
+        const raw = localStorage.getItem(RPT_DRAFT_KEY);
+        if (!raw) return;
+        try {
+            const draft = JSON.parse(raw);
+            if (draft.meta) {
+                if (draft.meta.factory) $('rpt-factory').value = draft.meta.factory;
+                if (draft.meta.pillar)  $('rpt-pillar').value  = draft.meta.pillar;
+                if (draft.meta.date)    $('rpt-date').value    = draft.meta.date;
+            }
+            if (Array.isArray(draft.images)) {
+                draft.images.forEach((img, i) => { if (img) rptImgs[i] = img; });
+            }
+        } catch(_) {}
+    }
+
+    function initReportTab() {
+        loadRptDraft();
+        if (!$('rpt-pillar').value)  { const v = $('pillar-id').value.trim(); if (v) $('rpt-pillar').value = v; }
+        if (!$('rpt-factory').value) { const el = document.querySelector('input[name="factory"]:checked'); if (el) $('rpt-factory').value = el.value; }
+        if (!$('rpt-date').value)    $('rpt-date').value = new Date().toLocaleDateString('vi-VN');
+        ['rpt-factory','rpt-pillar','rpt-date'].forEach(id => {
+            const el = $(id);
+            if (el && !el._rptSaveAttached) { el.addEventListener('input', saveRptDraft); el._rptSaveAttached = true; }
+        });
+        renderRptSlots();
+    }
+
+    function renderRptSlots() {
+        $('rpt-slots').innerHTML = SLOTS_DEF.map((s, i) => `
+            <div class="rpt-slot${s.full ? ' full' : ''}">
+                <div class="rpt-slot-hdr">${s.n}: ${s.t}</div>
+                <div class="rpt-slot-desc">${s.d.replace(/\n/g,'<br>')}</div>
+                <div class="rpt-slot-img">
+                    ${rptImgs[i]
+                        ? `<img src="${rptImgs[i]}" alt="">`
+                        : `<div class="rpt-slot-empty"><i>🖼️</i><span>Chưa có ảnh</span></div>`}
+                </div>
+                <div class="rpt-slot-actions">
+                    <button class="btn-pick" onclick="pickRptImg(${i})"><i>📂</i> Chọn ảnh</button>
+                    ${rptImgs[i] ? `<button class="btn-clr" onclick="clearRptImg(${i})"><i>✕</i></button>` : ''}
+                </div>
+            </div>`).join('');
+    }
+
+    function pickRptImg(i) {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = 'image/*';
+        inp.onchange = () => {
+            if (!inp.files[0]) return;
+            const r = new FileReader();
+            r.onload = e => { rptImgs[i] = e.target.result; renderRptSlots(); saveRptDraft(); };
+            r.readAsDataURL(inp.files[0]);
+        };
+        inp.click();
+    }
+
+    function clearRptImg(i) { rptImgs[i] = null; renderRptSlots(); saveRptDraft(); }
+
+    async function exportReport(event) {
+        const factory = $('rpt-factory').value.trim() || '—';
+        const pillar  = $('rpt-pillar').value.trim()  || '—';
+        const date    = $('rpt-date').value.trim()     || new Date().toLocaleDateString('vi-VN');
+        const safe    = pillar.replace(/[^a-zA-Z0-9\-_]/g, '_');
+        const html    = buildRptHTML(factory, pillar, date);
+        const folderName = currentReportFolder || safe;
+
+        const btn = event.currentTarget;
+        const btnHtml = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '⏳ Đang xuất PDF...';
+
+        try {
+            const res = await apiPostWithRetry('export-report-pdf.php', { pillar, folderName, html, id: currentReportRecordId });
+            alert(`✅ Đã xuất PDF và lưu vào:\n${res.path}`);
+            if (currentReportRecordId) await refreshHistoryData();
+        } catch (err) {
+            alert(`Không xuất được PDF qua máy chủ:\n${err.message}\n\nSẽ tải file HTML về máy để bạn tự in (Ctrl+P) thay thế.`);
+            dlBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `Phieu_Test_${safe}.html`);
+        } finally {
+            btn.disabled = false; btn.innerHTML = btnHtml;
+        }
+    }
+
+    function dlBlob(blob, name) {
+        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
+        document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    function buildRptHTML(factory, pillar, date) {
+        const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 75" style="width:28mm;height:10mm;display:block;margin:0 auto"><defs><linearGradient id="ampg" x1="0" x2="1"><stop offset="0" stop-color="#dc2626"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs><text y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="#dc2626">R</text><text x="70" y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="url(#ampg)">&amp;</text><text x="140" y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="#2563eb">B</text></svg>`;
+
+        const hdr = () => `
+<table class="hdr"><tr>
+  <td class="logo" rowspan="2">${logoSvg}<span class="co">CÔNG TY TNHH KỸ THUẬT RED &amp; BLUE</span></td>
+  <td class="ttl" rowspan="2"><b>PHIẾU HÌNH ẢNH</b><br><span>TEST TRỤ SẠC XUẤT XƯỞNG</span></td>
+  <td class="ref">Biên bản số: RB-M1604</td>
+</tr><tr>
+  <td class="ref">Phát hành ngày: 05/01/2026</td>
+</tr><tr>
+  <td class="inf"><small>Đơn vị gia công:</small><br><b>${factory}</b></td>
+  <td class="inf"><small>Mã trụ sạc:</small><br><b>${pillar}</b></td>
+  <td class="inf"><small>Ngày tạo phiếu:</small><br><b>${date}</b></td>
+</tr></table>`;
+
+        const cell = i => {
+            const s = SLOTS_DEF[i];
+            const img = rptImgs[i] ? `<img src="${rptImgs[i]}">` : '<div class="nimg">Chưa có ảnh</div>';
+            return `<td class="sc"><div class="sw"><div class="sh">${s.n}: ${s.t}</div><div class="sd">${s.d.replace(/\n/g,'<br>')}</div><div class="si">${img}</div></div></td>`;
+        };
+
+        const fullCell = i => {
+            const s = SLOTS_DEF[i];
+            const img = rptImgs[i] ? `<img src="${rptImgs[i]}">` : '<div class="nimg">Chưa có ảnh</div>';
+            return `<td class="sc" colspan="3"><div class="sw fw"><div class="sh">${s.n}: ${s.t}</div><div class="sd">${s.d}</div><div class="si">${img}</div></div></td>`;
+        };
+
+        const css = `
+@page{size:A4 portrait;margin:10mm}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#fff;font-size:9pt;color:#000}
+.page{width:190mm;margin:0 auto;page-break-after:always}
+.page:last-child{page-break-after:auto}
+.hdr{width:100%;border-collapse:collapse;margin-bottom:2mm}
+.hdr td{border:1px solid #000;padding:3px 6px;vertical-align:middle}
+.logo{width:32mm;text-align:center;padding:5px 4px 3px}
+.co{font-size:6pt;display:block;margin-top:3px;line-height:1.3}
+.ttl{text-align:center;font-size:11pt;line-height:1.5;font-weight:700}
+.ttl span{font-weight:400;font-size:10pt}
+.ref{width:40mm;font-size:8pt;padding:3px 6px}
+.inf{font-size:8pt}
+table.sl{width:100%;border-collapse:collapse;table-layout:fixed}
+.sc{border:1px solid #000;padding:0;vertical-align:top}
+.sw{height:113mm;display:flex;flex-direction:column}
+.sw.fw{height:228mm}
+.sh{background:#1f2937;color:#fff;padding:4px 7px;font-size:8pt;font-weight:700;flex-shrink:0;line-height:1.3;height:11mm;overflow:hidden}
+.sd{padding:4px 7px;font-size:7.5pt;color:#333;background:#f7f7f7;border-bottom:1px solid #ccc;flex-shrink:0;height:17mm;overflow:hidden}
+.si{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#eee;padding:2px}
+.si img{width:100%;height:100%;object-fit:cover}
+.nimg{color:#aaa;font-size:9pt;text-align:center}
+.pgnum{text-align:right;font-size:7pt;color:#888;margin-top:1.5mm}
+@media screen{body{background:#555;padding:15px}.page{background:#fff;padding:10mm;margin:15px auto;box-shadow:0 4px 15px rgba(0,0,0,.3)}}`;
+
+        const p = (c, n) => `<div class="page">${hdr()}<table class="sl">${c}</table><div class="pgnum">Trang ${n} / 4</div></div>`;
+
+        return `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+<title>Phiếu Test Trụ - ${pillar}</title>
+<style>${css}</style></head><body>
+${p(`<tr>${cell(0)}${cell(1)}${cell(2)}</tr><tr>${cell(3)}${cell(4)}${cell(5)}</tr>`, 1)}
+${p(`<tr>${cell(6)}${cell(7)}${cell(8)}</tr><tr>${cell(9)}${cell(10)}${cell(11)}</tr>`, 2)}
+${p(`<tr>${fullCell(12)}</tr>`, 3)}
+${p(`<tr>${fullCell(13)}</tr>`, 4)}
+</body></html>`;
+    }
+
+    /* ─── Init ─── */
+    window.addEventListener('DOMContentLoaded', async () => {
+        try { eolRootHandle = await idbGet(IDB_ROOT_KEY); } catch (_) {}
+        await refreshHistoryData();
+        const tabParam = new URLSearchParams(location.search).get('tab');
+        switchTab(tabParam === 'list' ? 'list' : 'form');
+        setInterval(() => { if (!document.hidden) refreshHistoryData(); }, 6000);
+    });
+</script>
+</body>
+</html>

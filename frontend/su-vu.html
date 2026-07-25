@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sự Vụ - RB CONTROL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #d97706;
+            --primary-dark: #b45309;
+            --success: #10b981;
+            --danger:  #ef4444;
+            --warning: #f59e0b;
+            --bg:      #f4f6f9;
+            --card:    #ffffff;
+            --border:  #e5e7eb;
+            --text:    #1f2937;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
+        .inner-wrap { max-width: 860px; margin: 0 auto; padding: 0 20px 60px; }
+
+        .page-topbar { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: var(--card); border-bottom: 1px solid var(--border); margin-bottom: 24px; position: sticky; top: 0; z-index: 50; }
+        .btn-back { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px; background: none; color: #6b7280; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+        .btn-back:hover { background: #f3f4f6; color: var(--text); }
+        .topbar-icon { width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; }
+        .topbar-title { font-size: 16px; font-weight: 700; }
+
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--card); border-radius: 10px; padding: 5px; border: 1px solid var(--border); width: fit-content; }
+        .tab-btn { padding: 8px 20px; border: none; background: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; color: #6b7280; display: flex; align-items: center; gap: 7px; transition: all .2s; }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .card { background: var(--card); border-radius: 12px; padding: 20px 22px; box-shadow: 0 2px 8px rgba(0,0,0,.05); border: 1px solid var(--border); margin-bottom: 14px; }
+        .card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; padding-bottom: 11px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+
+        .field { margin-bottom: 16px; }
+        .field label { display: block; font-size: 12px; font-weight: 600; color: #4b5563; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+        input[type="text"], textarea { width: 100%; padding: 10px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color .15s; font-family: inherit; }
+        input[type="text"]:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(217,119,6,.1); }
+        input.has-value { border-color: var(--success); background: #f0fdf4; }
+        textarea { resize: vertical; min-height: 90px; }
+
+        .field-with-btn { display: flex; gap: 8px; }
+        .field-with-btn input { flex: 1; }
+
+        .btn-primary { background: var(--primary); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: background .15s; white-space: nowrap; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-outline { background: none; border: 1.5px solid var(--primary); color: var(--primary); padding: 9px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; white-space: nowrap; }
+        .btn-outline:hover { background: #fffbeb; }
+        .btn-save-main { width: 100%; background: linear-gradient(135deg,#b45309,#d97706); color: #fff; border: none; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 6px; transition: opacity .15s; }
+        .btn-save-main:hover { opacity: .9; }
+
+        .hint-box { display: flex; gap: 8px; align-items: flex-start; padding: 9px 12px; background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; margin-bottom: 14px; font-size: 12px; color: #92400e; line-height: 1.5; }
+
+        /* LIST TAB */
+        .list-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+        .search-box { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; width: 220px; }
+        .search-box:focus { border-color: var(--primary); }
+
+        .sv-item { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; margin-bottom: 10px; }
+        .sv-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; user-select: none; transition: background .15s; flex-wrap: wrap; }
+        .sv-header:hover { background: #fffbeb; }
+        .sv-ma { font-weight: 700; font-size: 14px; }
+        .sv-badge { font-size: 11px; padding: 2px 9px; border-radius: 10px; background: #ede9fe; color: #5b21b6; font-weight: 600; white-space: nowrap; }
+        .sv-time { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+        .sv-arrow { color: #9ca3af; font-size: 12px; transition: transform .2s; margin-left: auto; }
+        .sv-item.open .sv-arrow { transform: rotate(180deg); }
+        .sv-detail { display: none; border-top: 1px solid var(--border); padding: 14px 16px; }
+        .sv-item.open .sv-detail { display: block; }
+        .tinh-trang-select { padding: 5px 9px; border: 1px solid var(--border); border-radius: 8px; font-size: 11.5px; font-weight: 700; outline: none; cursor: pointer; background: #fff; color: var(--text); max-width: 220px; }
+        .tinh-trang-select.chua-xu-ly         { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+        .tinh-trang-select.dang-kiem-tra      { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+        .tinh-trang-select.da-tim-loi         { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .tinh-trang-select.gui-linh-kien      { background: #f5f3ff; color: #5b21b6; border-color: #ddd6fe; }
+        .tinh-trang-select.linh-kien-den-noi  { background: #ecfeff; color: #155e75; border-color: #a5f3fc; }
+        .tinh-trang-select.da-fix-dong-case   { background: #f0fdf4; color: #065f46; border-color: #bbf7d0; }
+
+        /* Mức độ ưu tiên */
+        .priority-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .priority-pill { padding: 8px 14px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: #fff; color: #6b7280; transition: all .15s; }
+        .priority-pill:hover { border-color: var(--primary); }
+        .priority-pill.active[data-level="khan-cap"]      { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+        .priority-pill.active[data-level="qua-han"]       { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+        .priority-pill.active[data-level="moi-xuat-hien"] { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+
+        .sv-priority-badge { font-size: 10px; padding: 2px 8px; border-radius: 8px; font-weight: 700; white-space: nowrap; }
+        .sv-priority-badge.khan-cap      { background: #ef4444; color: #fff; }
+        .sv-priority-badge.qua-han       { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .sv-priority-badge.moi-xuat-hien { background: #dbeafe; color: #1e40af; }
+
+        .sv-item.urgent { border: 2px solid #ef4444; box-shadow: 0 0 0 1px #ef4444, 0 4px 14px rgba(239,68,68,.15); }
+        .sv-item.urgent .sv-header { background: #fef2f2; }
+
+        .sv-desc-box { font-size: 13px; color: #374151; line-height: 1.6; background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; white-space: pre-wrap; }
+        .sv-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+        .btn-delete { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 12px; padding: 5px 10px; border-radius: 6px; font-weight: 600; }
+        .btn-delete:hover { background: #fee2e2; }
+
+        .empty-state { text-align: center; color: #9ca3af; padding: 48px 20px; font-size: 14px; }
+        .empty-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+
+        /* MODALS */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 999; align-items: center; justify-content: center; padding: 20px; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: #fff; border-radius: 14px; padding: 24px; width: 520px; max-width: 100%; max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,.2); }
+        .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+        .modal-title { font-size: 15px; font-weight: 700; flex: 1; }
+        .btn-modal-close { background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 18px; padding: 4px; border-radius: 4px; }
+        .btn-modal-close:hover { background: #f3f4f6; }
+        .modal-search { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; width: 100%; margin-bottom: 10px; }
+        .modal-search:focus { border-color: var(--primary); }
+        .modal-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; min-height: 60px; }
+        .modal-item { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s; }
+        .modal-item:hover { border-color: var(--primary); background: #fffbeb; }
+        .modal-item-id { font-weight: 700; font-size: 13px; flex: 1; }
+        .modal-item-meta { font-size: 11px; color: #6b7280; }
+        .modal-footer { margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px; }
+        .btn-modal-cancel { background: #f3f4f6; color: #374151; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-modal-cancel:hover { background: #e5e7eb; }
+        .btn-modal-ok { background: var(--primary); color: #fff; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-modal-ok:hover { background: var(--primary-dark); }
+
+        /* PHIẾU XỬ LÝ SỰ CỐ */
+        .btn-svc { background: none; border: 1.5px solid #6d28d9; color: #6d28d9; padding: 5px 11px; border-radius: 8px; font-weight: 600; font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-svc:hover { background: #f5f3ff; }
+        .btn-pdf-badge { background: #ede9fe; border: 1px solid #ddd6fe; color: #5b21b6; border-radius: 8px; padding: 3px 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-pdf-badge:hover { background: #ddd6fe; }
+        .svc-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; padding: 14px 16px; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 10px; }
+        @media (max-width: 600px) { .svc-meta { grid-template-columns: 1fr 1fr; } }
+        .svc-lbl { display: block; font-size: 11px; font-weight: 700; color: #5b21b6; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+        .svc-meta input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; box-sizing: border-box; }
+        .svc-meta input:focus { border-color: #6d28d9; }
+        .svc-section-lbl { background: #1f2937; color: #fff; padding: 7px 12px; font-size: 12px; font-weight: 700; border-radius: 6px; margin: 4px 0 10px; }
+        .rpt-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+        .rpt-slot  { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+        .rpt-slot-hdr  { background: #1f2937; color: #fff; padding: 7px 10px; font-size: 12px; font-weight: 700; }
+        .rpt-slot-desc { padding: 6px 10px; font-size: 11px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid var(--border); min-height: 34px; }
+        .rpt-slot-img  { flex: 1; position: relative; background: #f3f4f6; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 170px; }
+        .rpt-slot-img img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+        .rpt-slot-empty { text-align: center; color: #9ca3af; padding: 16px; }
+        .rpt-slot-empty i { font-size: 24px; display: block; margin-bottom: 6px; }
+        .rpt-slot-empty span { font-size: 11px; }
+        .rpt-slot-actions { padding: 8px 10px; display: flex; gap: 6px; border-top: 1px solid var(--border); }
+        .btn-pick { flex: 1; padding: 7px; background: #f5f3ff; border: 1px solid #6d28d9; color: #6d28d9; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-pick:hover { background: #ede9fe; }
+        .btn-clr  { padding: 7px 10px; background: #fee2e2; border: 1px solid #fca5a5; color: var(--danger); border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-clr:hover { background: #fecaca; }
+        .btn-export-rpt { width: 100%; background: #6d28d9; color: #fff; border: none; padding: 13px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-export-rpt:hover { background: #5b21b6; }
+    </style>
+</head>
+<body>
+<script src="js/config.js"></script>
+<script>
+    (function () {
+        function requireLogin() {
+            if (!localStorage.getItem('user')) window.location.replace('login.html');
+        }
+        requireLogin();
+        window.addEventListener('pageshow', function (e) { if (e.persisted) requireLogin(); });
+    })();
+</script>
+
+<div class="page-topbar">
+    <button class="btn-back" onclick="window.location.href='dashboard.html'">
+        <i>←</i> Quay lại
+    </button>
+    <div class="topbar-icon" style="background:linear-gradient(135deg,#d97706,#f59e0b)">
+        <i>⚠️</i>
+    </div>
+    <span class="topbar-title">Sự Vụ</span>
+</div>
+
+<div class="inner-wrap">
+    <div class="tabs">
+        <button class="tab-btn active" id="btn-tab-form" onclick="switchTab('form')">
+            <i>✏️</i> Ghi Nhận Sự Vụ
+        </button>
+        <button class="tab-btn" id="btn-tab-list" onclick="switchTab('list')">
+            <i>📋</i> Danh Sách Sự Vụ
+            <span id="list-badge" style="background:#d97706;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;display:none"></span>
+        </button>
+        <button class="tab-btn" id="btn-tab-detail" onclick="switchTab('detail')" style="display:none">
+            <i>🔎</i> Chi Tiết Trụ
+        </button>
+        <button class="tab-btn" id="btn-tab-svc" onclick="switchTab('svc')">
+            <i>🛠️</i> Phiếu Xử Lý Sự Cố
+        </button>
+    </div>
+
+    <!-- TAB GHI NHẬN -->
+    <div id="tab-form" class="tab-content active">
+        <div class="card">
+            <div class="card-title"><i style="color:#d97706">⚠️</i> Thông Tin Sự Vụ</div>
+
+            <div class="field">
+                <label><i style="color:#0ea5e9;margin-right:4px">📡</i>Mã trạm</label>
+                <div class="field-with-btn">
+                    <input type="text" id="sv-ma-tram" placeholder="Ví dụ: V.E.HCM1001" oninput="onMaTramChange()">
+                    <button class="btn-outline" onclick="openTramModal()"><i>🔍</i> Chọn trạm</button>
+                </div>
+            </div>
+
+            <div class="field">
+                <label><i style="color:#6d28d9;margin-right:4px">🔌</i>Mã trụ đang bị báo lỗi</label>
+                <div class="field-with-btn">
+                    <input type="text" id="sv-ma-tru" placeholder="Ví dụ: HCM1001.001">
+                    <button class="btn-outline" onclick="openTruModal()"><i>🔍</i> Chọn trụ</button>
+                </div>
+            </div>
+
+            <div class="field">
+                <label><i style="color:#ef4444;margin-right:4px">📄</i>Mô tả lỗi</label>
+                <textarea id="sv-mo-ta" placeholder="Mô tả chi tiết hiện tượng lỗi..."></textarea>
+            </div>
+
+            <div class="field">
+                <label><i style="color:#ef4444;margin-right:4px">🚨</i>Mức độ</label>
+                <div class="priority-group" id="sv-muc-do-group">
+                    <button type="button" class="priority-pill" data-level="khan-cap" onclick="setMucDo('khan-cap')">🔴 Khẩn cấp</button>
+                    <button type="button" class="priority-pill" data-level="qua-han" onclick="setMucDo('qua-han')">🟠 Quá hạn (nhắc lại)</button>
+                    <button type="button" class="priority-pill" data-level="moi-xuat-hien" onclick="setMucDo('moi-xuat-hien')">🔵 Mới xuất hiện</button>
+                </div>
+            </div>
+
+            <button class="btn-save-main" onclick="saveSuVu()">
+                <i>💾</i> Lưu Sự Vụ
+            </button>
+        </div>
+    </div>
+
+    <!-- TAB DANH SÁCH -->
+    <div id="tab-list" class="tab-content">
+        <div class="card">
+            <div class="list-toolbar">
+                <span id="list-count" style="font-size:13px;color:#6b7280"></span>
+                <input type="text" class="search-box" id="search-sv" placeholder="🔍  Tìm mã trạm, mã trụ..." oninput="clearPinnedTop();renderList()">
+            </div>
+            <div id="sv-list-container"></div>
+        </div>
+    </div>
+
+    <!-- TAB CHI TIẾT TRỤ -->
+    <div id="tab-detail" class="tab-content">
+        <div class="card">
+            <div class="card-title"><i>🔌</i> <span id="pd-title">Chi tiết mã trụ</span></div>
+            <div id="pd-container"></div>
+        </div>
+    </div>
+
+    <!-- TAB PHIẾU XỬ LÝ SỰ CỐ -->
+    <div id="tab-svc" class="tab-content">
+        <div class="field">
+            <label><i style="color:#6d28d9;margin-right:4px">🛠️</i>Chọn sự vụ — mỗi sự vụ 1 phiếu riêng</label>
+            <select id="svc-picker" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none" onchange="openSvcReport(Number(this.value))">
+                <option value="">— Chọn 1 sự vụ để tạo/sửa phiếu —</option>
+            </select>
+        </div>
+        <div class="svc-meta">
+            <div><label class="svc-lbl">Mã trạm sạc</label><input type="text" id="svc-ma-tram" readonly style="background:#f3f4f6;cursor:not-allowed"></div>
+            <div><label class="svc-lbl">Mã trụ sạc</label><input type="text" id="svc-ma-tru" readonly style="background:#f3f4f6;cursor:not-allowed"></div>
+            <div><label class="svc-lbl">Vendor</label><input type="text" id="svc-vendor" placeholder="Ví dụ: BTC Power"></div>
+            <div><label class="svc-lbl">Mã lỗi</label><input type="text" id="svc-ma-loi" placeholder="Ví dụ: E-102"></div>
+            <div><label class="svc-lbl">Địa điểm lắp đặt</label><input type="text" id="svc-dia-diem" placeholder="Địa chỉ trạm"></div>
+            <div><label class="svc-lbl">Ngày tạo phiếu</label><input type="text" id="svc-ngay" placeholder="24/07/2026"></div>
+        </div>
+        <div class="card" style="margin-bottom:14px">
+            <div class="card-title"><i style="color:#6d28d9">📄</i> Mô tả lỗi đang phát sinh</div>
+            <textarea id="svc-mo-ta" placeholder="Mô tả chi tiết hiện tượng lỗi..." style="min-height:70px"></textarea>
+        </div>
+        <div class="svc-section-lbl">TRƯỚC KHI XỬ LÝ</div>
+        <div class="rpt-slots" id="svc-slots-before"></div>
+        <div class="svc-section-lbl">SAU KHI KHẮC PHỤC</div>
+        <div class="rpt-slots" id="svc-slots-after"></div>
+        <button class="btn-export-rpt" onclick="exportSvcReport(event)">
+            <i>📥</i> Xuất Phiếu
+        </button>
+    </div>
+</div>
+
+<!-- Modal xác nhận vị trí lưu Phiếu Xử Lý Sự Cố -->
+<div class="modal-overlay" id="save-loc-modal">
+    <div class="modal-box" style="width:440px">
+        <div class="modal-header">
+            <i style="color:#059669">📁</i>
+            <span class="modal-title">Xác nhận vị trí lưu</span>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:10px">Phiếu Ảnh và các ảnh đã chọn sẽ được lưu vào:</p>
+        <div id="save-loc-path" style="font-family:monospace;font-size:12.5px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;word-break:break-all"></div>
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" id="save-loc-cancel">Hủy</button>
+            <button class="btn-modal-ok" id="save-loc-ok"><i>💾</i> Lưu</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chọn mã trạm -->
+<div class="modal-overlay" id="tram-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <i style="color:#0ea5e9">📡</i>
+            <span class="modal-title">Chọn Mã Trạm</span>
+            <button class="btn-modal-close" onclick="closeModal('tram')"><i>✕</i></button>
+        </div>
+        <input type="text" class="modal-search" id="modal-tram-search" placeholder="🔍  Tìm mã trạm..." oninput="renderModalTram()">
+        <div class="modal-list" id="modal-tram-list"></div>
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" onclick="closeModal('tram')">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chọn mã trụ -->
+<div class="modal-overlay" id="tru-modal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <i style="color:#6d28d9">🔌</i>
+            <span class="modal-title">Chọn Mã Trụ</span>
+            <button class="btn-modal-close" onclick="closeModal('tru')"><i>✕</i></button>
+        </div>
+        <input type="text" class="modal-search" id="modal-tru-search" placeholder="🔍  Tìm mã trụ..." oninput="renderModalTru()">
+        <div class="modal-list" id="modal-tru-list"></div>
+        <div class="modal-footer">
+            <button class="btn-modal-cancel" onclick="closeModal('tru')">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+
+    /* ─── API (Flask backend — URL cấu hình trong js/config.js) ─── */
+    async function apiGet(path) {
+        const res  = await fetch(`${API_BASE}/${path}`);
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+    function getCurrentUsername() {
+        try { return JSON.parse(localStorage.getItem('user') || '{}').username || 'unknown'; }
+        catch (_) { return 'unknown'; }
+    }
+    async function apiPost(path, body) {
+        const res = await fetch(`${API_BASE}/${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Username': getCurrentUsername() },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
+        return data;
+    }
+
+    /* Server backend đôi lúc tự khởi động lại (khi có cập nhật code) làm rớt đúng
+       request đang chạy ("Failed to fetch") dù không phải lỗi thật — tự thử lại
+       vài lần trước khi báo lỗi cho người dùng, dành cho các thao tác quan trọng
+       như xuất PDF. */
+    async function apiPostWithRetry(path, body, retries = 3, delayMs = 1500) {
+        for (let attempt = 0; ; attempt++) {
+            try {
+                return await apiPost(path, body);
+            } catch (err) {
+                const isNetworkErr = err instanceof TypeError || /Failed to fetch/i.test(err.message || '');
+                if (!isNetworkErr || attempt >= retries) throw err;
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+        }
+    }
+
+    function dlBlob(blob, name) {
+        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
+        document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    function compressImage(base64, maxW = 800, quality = 0.8) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, maxW / img.width);
+                const canvas = document.createElement('canvas');
+                canvas.width  = Math.round(img.width  * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = () => resolve(base64);
+            img.src = base64;
+        });
+    }
+
+    /* ─── Bộ nhớ dùng chung, lấy từ MySQL ─── */
+    let suvuCache = [];
+    let tramCache = [];
+    async function refreshSuVuList() {
+        try { suvuCache = (await apiGet('suvu-list.php')).items || []; }
+        catch (err) { console.error(err); }
+        updateBadge();
+        if ($('tab-list').classList.contains('active')) renderList();
+    }
+    async function refreshTramCache() {
+        try { tramCache = (await apiGet('tram-list.php')).items || []; }
+        catch (err) { console.error(err); }
+    }
+
+    /* ══ TABS ══ */
+    function switchTab(n) {
+        ['form','list','detail','svc'].forEach(t => {
+            $(`tab-${t}`).classList.toggle('active', t===n);
+            $(`btn-tab-${t}`).classList.toggle('active', t===n);
+        });
+        if (n==='list') refreshSuVuList();
+        if (n==='svc') renderSvcPicker();
+    }
+
+    function onMaTramChange() {
+        const v = $('sv-ma-tram').value.trim();
+        $('sv-ma-tram').classList.toggle('has-value', !!v);
+    }
+
+    // Danh sách trụ (Master + Slave) thuộc 1 mã trạm, lấy từ dữ liệu "Trạm Sạc"
+    function getTruListOfTram(maTram) {
+        const rec = tramCache.find(r => r.maTong.toLowerCase() === maTram.trim().toLowerCase());
+        if (!rec) return [];
+        const out = [];
+        (rec.tramNho||[]).forEach(nho => {
+            if (nho.truMaster) out.push({ pillar: nho.truMaster.pillar, role: 'Master', maNho: nho.maNho, model: nho.truMaster.model, result: nho.truMaster.result });
+            (nho.truSlaves||[]).forEach(t => out.push({ pillar: t.pillar, role: 'Slave', maNho: nho.maNho, model: t.model, result: t.result }));
+        });
+        return out;
+    }
+
+    /* ══ MODAL: MÃ TRẠM ══ */
+    async function openTramModal() {
+        $('modal-tram-search').value = '';
+        $('modal-tram-list').innerHTML = '<div class="empty-state" style="padding:20px"><i>⏳</i>Đang tải danh sách trạm...</div>';
+        $('tram-modal').classList.add('open');
+        await refreshTramCache();
+        renderModalTram();
+    }
+    function renderModalTram() {
+        const q   = $('modal-tram-search').value.toLowerCase();
+        const lst = tramCache;
+        const fil = q ? lst.filter(r => r.maTong.toLowerCase().includes(q)) : lst;
+        const con = $('modal-tram-list');
+        if (!lst.length) { con.innerHTML = '<div class="empty-state" style="padding:20px"><i>📡</i>Chưa có trạm nào. Thêm tại module Trạm Sạc.</div>'; return; }
+        if (!fil.length) { con.innerHTML = '<div class="empty-state" style="padding:14px"><i>🔍</i>Không tìm thấy</div>'; return; }
+        con.innerHTML = fil.map(r => {
+            const truCount = (r.tramNho||[]).reduce((s,n) => s + (n.truMaster?1:0) + (n.truSlaves?.length||0), 0);
+            return `<div class="modal-item" onclick="selTram('${esc(r.maTong)}')">
+                <i style="color:#0ea5e9;flex-shrink:0">📡</i>
+                <span class="modal-item-id">${r.maTong}</span>
+                <span class="modal-item-meta">${r.diaChi ? r.diaChi + ' · ' : ''}${truCount} trụ</span>
+            </div>`;
+        }).join('');
+    }
+    function selTram(maTong) {
+        $('sv-ma-tram').value = maTong;
+        onMaTramChange();
+        closeModal('tram');
+    }
+
+    /* ══ MODAL: MÃ TRỤ ══ */
+    async function openTruModal() {
+        const maTram = $('sv-ma-tram').value.trim();
+        if (!maTram) { alert('Vui lòng nhập hoặc chọn mã trạm trước để xem danh sách trụ của trạm đó.'); return; }
+        $('modal-tru-search').value = '';
+        $('modal-tru-list').innerHTML = '<div class="empty-state" style="padding:20px"><i>⏳</i>Đang tải danh sách trụ...</div>';
+        $('tru-modal').classList.add('open');
+        await refreshTramCache();
+        renderModalTru();
+    }
+    function renderModalTru() {
+        const maTram = $('sv-ma-tram').value.trim();
+        const q   = $('modal-tru-search').value.toLowerCase();
+        const lst = getTruListOfTram(maTram);
+        const fil = q ? lst.filter(t => t.pillar.toLowerCase().includes(q)) : lst;
+        const con = $('modal-tru-list');
+        if (!lst.length) { con.innerHTML = `<div class="empty-state" style="padding:20px"><i>🔌</i>Trạm "${esc(maTram)}" chưa có trụ nào trong dữ liệu Trạm Sạc.<br>Bạn có thể nhập tay mã trụ.</div>`; return; }
+        if (!fil.length) { con.innerHTML = '<div class="empty-state" style="padding:14px"><i>🔍</i>Không tìm thấy</div>'; return; }
+        con.innerHTML = fil.map(t => {
+            const rc = t.result==='Pass' ? '#059669' : t.result==='Fail' ? '#dc2626' : '#9ca3af';
+            return `<div class="modal-item" onclick="selTru('${esc(t.pillar)}')">
+                <i style="color:#6d28d9;flex-shrink:0">🔌</i>
+                <span class="modal-item-id">${t.pillar}</span>
+                <span class="modal-item-meta">${t.role}${t.maNho ? ' · '+t.maNho : ''}${t.model ? ' · '+t.model : ''}</span>
+                <span style="font-size:10px;font-weight:700;color:${rc}">${t.result||''}</span>
+            </div>`;
+        }).join('');
+    }
+    function selTru(pillar) {
+        $('sv-ma-tru').value = pillar;
+        closeModal('tru');
+    }
+
+    /* ══ MODALS COMMON ══ */
+    function closeModal(which) { $(`${which}-modal`).classList.remove('open'); }
+
+    /* ══ MỨC ĐỘ ƯU TIÊN ══ */
+    let currentMucDo = 'moi-xuat-hien';
+    function setMucDo(level) {
+        currentMucDo = level;
+        document.querySelectorAll('#sv-muc-do-group .priority-pill').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.level === level);
+        });
+    }
+    setMucDo('moi-xuat-hien');
+
+    /* ══ SAVE ══ */
+    async function saveSuVu() {
+        const maTram = $('sv-ma-tram').value.trim();
+        const maTru  = $('sv-ma-tru').value.trim();
+        const moTa   = $('sv-mo-ta').value.trim();
+
+        if (!maTram) { alert('Vui lòng nhập mã trạm.'); return; }
+        if (!maTru)  { alert('Vui lòng nhập mã trụ đang bị báo lỗi.'); return; }
+        if (!moTa)   { alert('Vui lòng nhập mô tả lỗi.'); return; }
+
+        try {
+            await apiPost('suvu-save.php', { maTram, maTru, moTa, mucDo: currentMucDo });
+        } catch (err) {
+            alert('Không lưu được lên máy chủ: ' + err.message);
+            return;
+        }
+
+        $('sv-ma-tram').value = ''; onMaTramChange();
+        $('sv-ma-tru').value  = '';
+        $('sv-mo-ta').value   = '';
+        setMucDo('moi-xuat-hien');
+
+        alert(`✅ Đã ghi nhận sự vụ tại trạm "${maTram}" - trụ "${maTru}"!`);
+        switchTab('list');
+    }
+
+    /* ══ LIST ══ */
+    function updateBadge() {
+        const n = suvuCache.length;
+        $('list-badge').textContent = n;
+        $('list-badge').style.display = n ? '' : 'none';
+    }
+
+    const TINHTRANG_LABEL = {
+        'chua-xu-ly':        'Chưa xử lý',
+        'dang-kiem-tra':     'KTV đang kiểm tra',
+        'da-tim-loi':        'Đã tìm ra lỗi',
+        'gui-linh-kien':     'Linh kiện đang được gửi ra site',
+        'linh-kien-den-noi': 'Linh kiện đến nơi tiến hành khắc phục',
+        'da-fix-dong-case':  'Đã fix được lỗi đóng case',
+    };
+    const MUCDO_LABEL = { 'khan-cap': '🔴 Khẩn cấp', 'qua-han': '🟠 Quá hạn (nhắc lại)', 'moi-xuat-hien': '🔵 Mới xuất hiện' };
+
+    let openSvRows   = new Set();
+    let pinnedTopId  = null; // sự vụ vừa nhảy vào từ Dashboard, tạm đẩy lên đầu danh sách
+
+    function clearPinnedTop() { pinnedTopId = null; }
+
+    function renderList() {
+        const q   = ($('search-sv').value||'').toLowerCase();
+        const arr = suvuCache;
+        const fil = (q ? arr.filter(r => r.maTram.toLowerCase().includes(q) || r.maTru.toLowerCase().includes(q)) : arr).slice();
+        if (pinnedTopId != null) {
+            const idx = fil.findIndex(r => r.id === pinnedTopId);
+            if (idx > 0) fil.unshift(fil.splice(idx, 1)[0]);
+        }
+        $('list-count').textContent = `${arr.length} sự vụ đã ghi nhận`;
+        const con = $('sv-list-container');
+        if (!fil.length) { con.innerHTML = `<div class="empty-state"><i>⚠️</i>${q?'Không tìm thấy.':'Chưa có sự vụ nào. Hãy ghi nhận mới!'}</div>`; return; }
+
+        con.innerHTML = fil.map((r, idx) => {
+            const stt   = String(idx + 1).padStart(2, '0');
+            const st    = r.trangThai || 'chua-xu-ly';
+            const md    = r.mucDo || 'moi-xuat-hien';
+            const urgent = md === 'khan-cap' && st !== 'da-fix-dong-case';
+            const isOpen = openSvRows.has(r.id);
+            return `<div class="sv-item ${urgent?'urgent':''} ${isOpen?'open':''}" id="sv-${r.id}">
+                <div class="sv-header" onclick="toggleSv(${r.id})">
+                    <span style="font-size:11px;font-weight:700;color:#9ca3af;background:#f3f4f6;border-radius:6px;padding:2px 7px;flex-shrink:0">${stt}</span>
+                    <i style="color:#0ea5e9;font-size:14px;flex-shrink:0">📡</i>
+                    <span class="sv-ma">${esc(r.maTram)}</span>
+                    <span class="sv-badge" style="cursor:pointer" onclick="event.stopPropagation();showPillarDetail(${r.id})" title="Xem chi tiết mã trụ"><i style="font-size:10px">🔌</i> ${esc(r.maTru)}</span>
+                    ${r.hasXuLyPdf ? `<button class="btn-pdf-badge" onclick="event.stopPropagation();window.open('${API_BASE}/suvu-pdf.php?id=${r.id}','_blank')" title="Xem Phiếu Xử Lý Sự Cố"><i>📄</i> Phiếu XLSC</button>` : ''}
+                    <span class="sv-priority-badge ${md}">${MUCDO_LABEL[md]}</span>
+                    <select class="tinh-trang-select ${st}" onclick="event.stopPropagation()" onchange="updateTinhTrang(${r.id},this.value)" title="Đổi tình trạng xử lý">
+                        ${Object.keys(TINHTRANG_LABEL).map(k => `<option value="${k}" ${k===st?'selected':''}>${TINHTRANG_LABEL[k]}</option>`).join('')}
+                    </select>
+                    <span class="sv-time">${r.time}</span>
+                    <i class="sv-arrow">▾</i>
+                </div>
+                <div class="sv-detail">
+                    <div class="sv-desc-box">${esc(r.moTa)}</div>
+                    <div class="field" style="margin-bottom:0">
+                        <label>Mức độ</label>
+                        <div class="priority-group">
+                            ${Object.keys(MUCDO_LABEL).map(k => `<button type="button" class="priority-pill ${k===md?'active':''}" data-level="${k}" onclick="updateMucDoRecord(${r.id},'${k}')">${MUCDO_LABEL[k]}</button>`).join('')}
+                        </div>
+                    </div>
+                    <div class="sv-footer">
+                        <button class="btn-svc" onclick="event.stopPropagation();openSvcReport(${r.id})"><i>🛠️</i> ${r.hasXuLyPdf ? 'Sửa' : 'Tạo'} Phiếu Xử Lý Sự Cố</button>
+                        <button class="btn-delete" onclick="deleteSv(${r.id})"><i>🗑️</i> Xóa sự vụ này</button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function toggleSv(id) {
+        clearPinnedTop();
+        const row = $(`sv-${id}`);
+        if (!row) return;
+        row.classList.toggle('open');
+        if (row.classList.contains('open')) openSvRows.add(id); else openSvRows.delete(id);
+    }
+
+    async function updateTinhTrang(id, value) {
+        clearPinnedTop();
+        try { await apiPost('suvu-status.php', { id, status: value }); }
+        catch (err) { alert('Không cập nhật được: ' + err.message); return; }
+        await refreshSuVuList();
+    }
+
+    async function updateMucDoRecord(id, value) {
+        clearPinnedTop();
+        try { await apiPost('suvu-mucdo.php', { id, mucDo: value }); }
+        catch (err) { alert('Không cập nhật được: ' + err.message); return; }
+        await refreshSuVuList();
+    }
+
+    async function deleteSv(id) {
+        if (!confirm('Xóa sự vụ này chứ?')) return;
+        clearPinnedTop();
+        try { await apiPost('suvu-delete.php', { id }); }
+        catch (err) { alert('Không xóa được: ' + err.message); return; }
+        await refreshSuVuList();
+    }
+
+    /* ══ CHI TIẾT TRỤ (tra cứu chéo Test Trụ / Trạm Sạc / lịch sử sửa chữa) ══ */
+    async function showPillarDetail(suvuId) {
+        clearPinnedTop();
+        const rec = suvuCache.find(r => r.id === suvuId);
+        if (!rec) return;
+
+        $('btn-tab-detail').style.display = '';
+        $('pd-title').textContent = `Chi tiết mã trụ: ${rec.maTru}`;
+        switchTab('detail');
+        $('pd-container').innerHTML = '<div class="empty-state"><i>⏳</i>Đang tải dữ liệu...</div>';
+
+        let data;
+        try {
+            data = await apiGet(`pillar-detail.php?maTru=${encodeURIComponent(rec.maTru)}&maTram=${encodeURIComponent(rec.maTram)}&excludeId=${suvuId}`);
+        } catch (err) {
+            $('pd-container').innerHTML = `<div class="empty-state"><i>⚠️</i>Không tải được dữ liệu: ${esc(err.message)}</div>`;
+            return;
+        }
+
+        const pdfSection = data.pdf
+            ? (data.pdf.hasPdf
+                ? `<button class="btn-outline" onclick="window.open('${API_BASE}/pillar-pdf.php?id=${data.pdf.id}','_blank')"><i>📄</i> Xem Phiếu PDF</button>`
+                : '<span style="color:#9ca3af;font-size:13px">Đã test trụ này nhưng chưa xuất Phiếu PDF.</span>')
+            : '<span style="color:#9ca3af;font-size:13px">Chưa có trong Test Trụ Xuất Xưởng.</span>';
+
+        const stationButtons = [];
+        if (data.station) {
+            stationButtons.push(`<button class="btn-outline" onclick="window.location.href='on-tram.html?tab=list&q=${encodeURIComponent(data.station.maTong)}'"><i>📡</i> Xem tại Trạm Sạc</button>`);
+        }
+        if (data.pdf && data.pdf.hasNghiemThuPdf) {
+            stationButtons.push(`<button class="btn-outline" onclick="window.open('${API_BASE}/pillar-pdf.php?id=${data.pdf.id}&type=nghiem-thu','_blank')"><i>📄</i> Xem Phiếu Nghiệm Thu</button>`);
+        }
+        if (data.pdf && data.pdf.hasNangCapPdf) {
+            stationButtons.push(`<button class="btn-outline" onclick="window.open('${API_BASE}/pillar-pdf.php?id=${data.pdf.id}&type=nang-cap','_blank')"><i>📄</i> Xem Phiếu Nâng Cấp</button>`);
+        }
+        const stationSection = stationButtons.length
+            ? stationButtons.join(' ')
+            : '<span style="color:#9ca3af;font-size:13px">Chưa tìm thấy mã trạm này trong Trạm Sạc.</span>';
+
+        const repairSection = data.lastRepair
+            ? `<div class="sv-desc-box" style="margin-top:8px"><strong>${esc(data.lastRepair.time)}</strong><br>${esc(data.lastRepair.moTa)}</div>`
+            : '<span style="color:#9ca3af;font-size:13px">Chưa có lần sửa chữa nào trước đây cho mã trụ này.</span>';
+
+        $('pd-container').innerHTML = `
+            <div class="field">
+                <label><i>📄</i> Phiếu Test Trụ</label>
+                <div>${pdfSection}</div>
+            </div>
+            <div class="field">
+                <label><i>📡</i> Trạm Sạc</label>
+                <div>${stationSection}</div>
+            </div>
+            <div class="field">
+                <label><i>🔧</i> Sửa chữa gần nhất</label>
+                <div>${repairSection}</div>
+            </div>
+        `;
+    }
+
+    /* ══ PHIẾU XỬ LÝ SỰ CỐ (mỗi sự vụ 1 phiếu riêng, khóa theo id sự vụ) ══ */
+    const SVC_DRAFT_PREFIX = 'svc_rpt_draft__';
+    const SVC_SLOTS_DEF = [
+        { t:'Hiện trạng lỗi 1', d:'Ghi rõ hiện tượng lỗi quan sát được.',        phase:'before' },
+        { t:'Hiện trạng lỗi 2', d:'Vị trí/linh kiện liên quan đến lỗi.',          phase:'before' },
+        { t:'Hiện trạng lỗi 3', d:'Thông số lỗi hiển thị trên thiết bị (nếu có).', phase:'before' },
+        { t:'Sau khi khắc phục 1', d:'Tình trạng sau khi thay thế/sửa chữa.',     phase:'after' },
+        { t:'Sau khi khắc phục 2', d:'Kết quả kiểm tra vận hành lại bình thường.', phase:'after' },
+    ];
+    let svcRptImgs   = new Array(SVC_SLOTS_DEF.length).fill(null);
+    let currentSvcId = null;
+
+    function svcDraftKey(id) { return SVC_DRAFT_PREFIX + id; }
+
+    function svcSaveDraft() {
+        if (!currentSvcId) return;
+        const meta = {
+            vendor:   $('svc-vendor').value,
+            maLoi:    $('svc-ma-loi').value,
+            diaDiem:  $('svc-dia-diem').value,
+            ngay:     $('svc-ngay').value,
+            moTa:     $('svc-mo-ta').value,
+        };
+        Promise.all(svcRptImgs.map(img => img ? compressImage(img, 800, 0.8) : Promise.resolve(null)))
+            .then(compressed => {
+                try { localStorage.setItem(svcDraftKey(currentSvcId), JSON.stringify({ meta, images: compressed })); }
+                catch(e) { console.warn('Không lưu được nháp Phiếu Xử Lý Sự Cố (có thể do localStorage đầy):', e); }
+            });
+    }
+
+    function svcLoadDraft(id) {
+        const raw = localStorage.getItem(svcDraftKey(id));
+        if (!raw) return;
+        try {
+            const draft = JSON.parse(raw);
+            if (draft.meta) {
+                if (draft.meta.vendor)  $('svc-vendor').value   = draft.meta.vendor;
+                if (draft.meta.maLoi)   $('svc-ma-loi').value    = draft.meta.maLoi;
+                if (draft.meta.diaDiem) $('svc-dia-diem').value  = draft.meta.diaDiem;
+                if (draft.meta.ngay)    $('svc-ngay').value      = draft.meta.ngay;
+                if (draft.meta.moTa)    $('svc-mo-ta').value     = draft.meta.moTa;
+            }
+            if (Array.isArray(draft.images)) draft.images.forEach((img, i) => { if (img) svcRptImgs[i] = img; });
+        } catch(_) {}
+    }
+
+    function renderSvcPicker() {
+        const sel = $('svc-picker');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">— Chọn 1 sự vụ để tạo/sửa phiếu —</option>' +
+            suvuCache.map(r => `<option value="${r.id}">${esc(r.maTram)} - ${esc(r.maTru)} (${TINHTRANG_LABEL[r.trangThai||'chua-xu-ly']})${r.hasXuLyPdf ? ' · đã có phiếu' : ''}</option>`).join('');
+        sel.value = currentSvcId != null ? String(currentSvcId) : '';
+    }
+
+    async function openSvcReport(id) {
+        if (!id) return;
+        clearPinnedTop();
+        const rec = suvuCache.find(r => r.id === id);
+        if (!rec) { alert('Không tìm thấy sự vụ này.'); return; }
+
+        currentSvcId = id;
+        svcRptImgs = new Array(SVC_SLOTS_DEF.length).fill(null);
+        $('svc-ma-tram').value  = rec.maTram;
+        $('svc-ma-tru').value   = rec.maTru;
+        $('svc-vendor').value   = '';
+        $('svc-ma-loi').value   = '';
+        $('svc-dia-diem').value = '';
+        $('svc-ngay').value     = new Date().toLocaleDateString('vi-VN');
+        $('svc-mo-ta').value    = rec.moTa || '';
+
+        svcLoadDraft(id);
+        renderSvcSlots();
+
+        switchTab('svc');
+
+        if (!$('svc-dia-diem').value) {
+            try {
+                const data = await apiGet(`pillar-detail.php?maTru=${encodeURIComponent(rec.maTru)}&maTram=${encodeURIComponent(rec.maTram)}`);
+                if (data.station && data.station.diaChi) {
+                    $('svc-dia-diem').value = data.station.diaChi;
+                    svcSaveDraft();
+                }
+            } catch(_) {}
+        }
+    }
+
+    function svcSlotHtml(i) {
+        const s = SVC_SLOTS_DEF[i];
+        return `<div class="rpt-slot">
+            <div class="rpt-slot-hdr">${s.t}</div>
+            <div class="rpt-slot-desc">${s.d}</div>
+            <div class="rpt-slot-img">
+                ${svcRptImgs[i]
+                    ? `<img src="${svcRptImgs[i]}" alt="">`
+                    : `<div class="rpt-slot-empty"><i>🖼️</i><span>Chưa có ảnh</span></div>`}
+            </div>
+            <div class="rpt-slot-actions">
+                <button class="btn-pick" onclick="pickSvcImg(${i})"><i>📂</i> Chọn ảnh</button>
+                ${svcRptImgs[i] ? `<button class="btn-clr" onclick="clearSvcImg(${i})"><i>✕</i></button>` : ''}
+            </div>
+        </div>`;
+    }
+
+    function renderSvcSlots() {
+        $('svc-slots-before').innerHTML = SVC_SLOTS_DEF.map((s,i)=>s.phase==='before'?i:-1).filter(i=>i>=0).map(svcSlotHtml).join('');
+        $('svc-slots-after').innerHTML  = SVC_SLOTS_DEF.map((s,i)=>s.phase==='after' ?i:-1).filter(i=>i>=0).map(svcSlotHtml).join('');
+    }
+
+    function pickSvcImg(i) {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = 'image/*';
+        inp.onchange = () => {
+            if (!inp.files[0]) return;
+            const r = new FileReader();
+            r.onload = e => { svcRptImgs[i] = e.target.result; renderSvcSlots(); svcSaveDraft(); };
+            r.readAsDataURL(inp.files[0]);
+        };
+        inp.click();
+    }
+
+    function clearSvcImg(i) { svcRptImgs[i] = null; renderSvcSlots(); svcSaveDraft(); }
+
+    /* Hộp xác nhận vị trí lưu trước khi thực sự xuất — trả về true/false */
+    function showSaveLocationConfirm(previewPath) {
+        return new Promise(resolve => {
+            $('save-loc-path').textContent = previewPath;
+            $('save-loc-modal').classList.add('open');
+            const okBtn = $('save-loc-ok'), cancelBtn = $('save-loc-cancel');
+            function cleanup() {
+                $('save-loc-modal').classList.remove('open');
+                okBtn.onclick = null; cancelBtn.onclick = null;
+            }
+            okBtn.onclick     = () => { cleanup(); resolve(true); };
+            cancelBtn.onclick = () => { cleanup(); resolve(false); };
+        });
+    }
+
+    async function exportSvcReport(event) {
+        const btn = event.currentTarget; // phải lấy TRƯỚC await, vì event sẽ hết hiệu lực sau khi dispatch xong
+        const btnHtml = btn.innerHTML;
+
+        if (!currentSvcId) { alert('Vui lòng mở phiếu từ 1 sự vụ trong Danh Sách Sự Vụ trước.'); return; }
+
+        const maTram   = $('svc-ma-tram').value.trim()   || '—';
+        const maTru    = $('svc-ma-tru').value.trim()    || '—';
+        const vendor   = $('svc-vendor').value.trim()    || '—';
+        const maLoi    = $('svc-ma-loi').value.trim()    || '—';
+        const diaDiem  = $('svc-dia-diem').value.trim()  || '—';
+        const ngay     = $('svc-ngay').value.trim()      || new Date().toLocaleDateString('vi-VN');
+        const moTa     = $('svc-mo-ta').value.trim()     || '—';
+        const safe     = maTru.replace(/[^a-zA-Z0-9\-_]/g, '_');
+        const html     = buildSvcRptHTML(maTram, maTru, vendor, maLoi, diaDiem, ngay, moTa);
+        const images   = SVC_SLOTS_DEF
+            .map((s, i) => svcRptImgs[i] ? { label: `${s.phase}_${String(i+1).padStart(2,'0')}_${s.t}`, dataUrl: svcRptImgs[i] } : null)
+            .filter(Boolean);
+
+        // Cấu trúc thư mục: List Xu Ly Su Co / <Mã Trạm> / <Mã Trụ>/ — tên file gắn kèm id sự vụ
+        // để không bị ghi đè khi cùng 1 trụ có nhiều sự vụ khác nhau theo thời gian.
+        const folderPath  = [maTram, maTru].filter(Boolean);
+        const fileTag     = `${safe}_SV${currentSvcId}`;
+        const previewPath = `List Xu Ly Su Co / ${folderPath.join(' / ')} / Bien_Ban_Xu_Ly_Su_Co_${fileTag}.pdf`;
+        const confirmed = await showSaveLocationConfirm(previewPath);
+        if (!confirmed) return;
+
+        btn.disabled = true; btn.innerHTML = '⏳ Đang xuất PDF...';
+
+        try {
+            const res = await apiPostWithRetry('export-report-pdf.php', {
+                pillar: fileTag, folderPath, html, images,
+                baseFolder: 'List Xu Ly Su Co',
+                reportName: 'Bien_Ban_Xu_Ly_Su_Co',
+            });
+            await apiPostWithRetry('suvu-set-pdf.php', { id: currentSvcId, path: res.path });
+            alert(`✅ Đã xuất PDF và lưu vào:\n${res.path}`);
+            localStorage.removeItem(svcDraftKey(currentSvcId));
+            currentSvcId = null;
+            await refreshSuVuList();
+            switchTab('list');
+        } catch (err) {
+            alert(`Không xuất được PDF qua máy chủ:\n${err.message}\n\nSẽ tải file HTML về máy để bạn tự in (Ctrl+P) thay thế.`);
+            dlBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `Bien_Ban_Xu_Ly_Su_Co_${fileTag}.html`);
+        } finally {
+            btn.disabled = false; btn.innerHTML = btnHtml;
+        }
+    }
+
+    function buildSvcRptHTML(maTram, maTru, vendor, maLoi, diaDiem, ngay, moTa) {
+        const logoSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 75" style="width:28mm;height:10mm;display:block;margin:0 auto"><defs><linearGradient id="svcrg" x1="0" x2="1"><stop offset="0" stop-color="#dc2626"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs><text y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="#dc2626">R</text><text x="70" y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="url(#svcrg)">&amp;</text><text x="140" y="64" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="66" fill="#2563eb">B</text></svg>`;
+
+        const hdr = `
+<table class="hdr"><tr>
+  <td class="logo" rowspan="2">${logoSvg}<span class="co">CÔNG TY TNHH KỸ THUẬT RED &amp; BLUE</span></td>
+  <td class="ttl" rowspan="2"><b>PHIẾU HÌNH ẢNH</b><br><span>XỬ LÝ SỰ CỐ TRẠM SẠC</span></td>
+  <td class="ref">Biên bản số: RB-M1605</td>
+</tr><tr>
+  <td class="ref">Phát hành ngày: 02/01/2026</td>
+</tr><tr>
+  <td class="inf"><small>Mã trạm sạc:</small><br><b>${maTram}</b></td>
+  <td class="inf"><small>Mã trụ sạc:</small><br><b>${maTru}</b></td>
+  <td class="inf"><small>Vendor:</small><br><b>${vendor}</b></td>
+</tr><tr>
+  <td class="inf"><small>Mã lỗi:</small><br><b>${maLoi}</b></td>
+  <td class="inf"><small>Địa điểm lắp đặt:</small><br><b>${diaDiem}</b></td>
+  <td class="inf"><small>Ngày tạo phiếu:</small><br><b>${ngay}</b></td>
+</tr></table>`;
+
+        const cell = i => {
+            const s = SVC_SLOTS_DEF[i];
+            const img = svcRptImgs[i] ? `<img src="${svcRptImgs[i]}">` : '<div class="nimg">Chưa có ảnh</div>';
+            return `<td class="sc"><div class="sw"><div class="sh">${s.t}</div><div class="sd">${s.d}</div><div class="si">${img}</div></div></td>`;
+        };
+
+        const before = SVC_SLOTS_DEF.map((s,i)=>s.phase==='before'?i:-1).filter(i=>i>=0);
+        const after  = SVC_SLOTS_DEF.map((s,i)=>s.phase==='after' ?i:-1).filter(i=>i>=0);
+
+        const css = `
+@page{size:A4 portrait;margin:10mm}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#fff;font-size:9pt;color:#000}
+.page{width:190mm;margin:0 auto}
+.hdr{width:100%;border-collapse:collapse;margin-bottom:2mm}
+.hdr td{border:1px solid #000;padding:3px 6px;vertical-align:middle}
+.logo{width:32mm;text-align:center;padding:5px 4px 3px}
+.co{font-size:6pt;display:block;margin-top:3px;line-height:1.3}
+.ttl{text-align:center;font-size:11pt;line-height:1.5;font-weight:700}
+.ttl span{font-weight:400;font-size:10pt}
+.ref{width:40mm;font-size:8pt;padding:3px 6px}
+.inf{font-size:8pt}
+.mota{border:1px solid #000;padding:6px 8px;margin-bottom:3mm;font-size:8.5pt;background:#fafafa}
+.mota b{display:block;margin-bottom:3px;font-size:8pt;text-transform:uppercase;letter-spacing:.3px}
+.seclbl{background:#1f2937;color:#fff;padding:4px 8px;font-size:8.5pt;font-weight:700;margin:3mm 0 2mm}
+table.sl{width:100%;border-collapse:collapse;table-layout:fixed}
+.sc{border:1px solid #000;padding:0;vertical-align:top}
+.sw{height:78mm;display:flex;flex-direction:column}
+.sh{background:#1f2937;color:#fff;padding:4px 7px;font-size:8pt;font-weight:700;flex-shrink:0;line-height:1.3}
+.sd{padding:4px 7px;font-size:7.5pt;color:#333;background:#f7f7f7;border-bottom:1px solid #ccc;flex-shrink:0}
+.si{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#eee;padding:2px}
+.si img{width:100%;height:100%;object-fit:cover}
+.nimg{color:#aaa;font-size:9pt;text-align:center}
+@media screen{body{background:#555;padding:15px}.page{background:#fff;padding:10mm;margin:15px auto;box-shadow:0 4px 15px rgba(0,0,0,.3)}}`;
+
+        return `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+<title>Phiếu Xử Lý Sự Cố Trạm Sạc - ${maTru}</title>
+<style>${css}</style></head><body>
+<div class="page">
+${hdr}
+<div class="mota"><b>Mô tả lỗi đang phát sinh</b>${moTa.replace(/\n/g,'<br>')}</div>
+<div class="seclbl">TRƯỚC KHI XỬ LÝ</div>
+<table class="sl"><tr>${before.map(cell).join('')}</tr></table>
+<div class="seclbl">SAU KHI KHẮC PHỤC</div>
+<table class="sl"><tr>${after.map(cell).join('')}</tr></table>
+</div>
+</body></html>`;
+    }
+
+    /* ══ UTILS ══ */
+    function esc(s) { return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        await refreshSuVuList();
+        renderSvcSlots();
+        const params = new URLSearchParams(location.search);
+        const openId = params.get('openId');
+        if (openId) { openSvRows.add(Number(openId)); pinnedTopId = Number(openId); }
+
+        if (params.get('tab') === 'list' || openId) {
+            ['form','list','detail'].forEach(t => {
+                $(`tab-${t}`).classList.toggle('active', t === 'list');
+                $(`btn-tab-${t}`).classList.toggle('active', t === 'list');
+            });
+            renderList();
+        }
+
+        if (openId) {
+            const row = document.getElementById(`sv-${openId}`);
+            if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        setInterval(() => { if (!document.hidden) refreshSuVuList(); }, 6000);
+    });
+</script>
+</body>
+</html>

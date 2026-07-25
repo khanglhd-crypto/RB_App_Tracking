@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - RB Control Tracking</title>
+
+    <!-- Font chữ Inter (đồng bộ với các trang khác trong hệ thống) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS riêng của trang Dashboard -->
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+<script src="js/config.js"></script>
+<script>
+    (function () {
+        function requireLogin() {
+            if (!localStorage.getItem('user')) window.location.replace('login.html');
+        }
+        requireLogin();
+        window.addEventListener('pageshow', function (e) { if (e.persisted) requireLogin(); });
+    })();
+</script>
+
+<div class="app-container">
+
+    <!-- ============================== SIDEBAR ============================== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon">RB</div>
+            <div class="sidebar-brand-text">
+                <h1>RB Control</h1>
+                <p>Tracking System</p>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <p class="nav-section-label">Menu chính</p>
+
+            <a href="dashboard.html" class="nav-item active">
+                <i>📊</i>
+                <span>Dashboard</span>
+            </a>
+            <a href="test-tru.html" class="nav-item">
+                <i>🔌</i>
+                <span>Test Trụ Xuất Xưởng</span>
+            </a>
+            <a href="on-tram.html" class="nav-item">
+                <i>📡</i>
+                <span>On Trạm</span>
+            </a>
+            <a href="nang-cap-tru-sac.html" class="nav-item">
+                <i>⚙️</i>
+                <span>Nâng Cấp Trụ Sạc</span>
+            </a>
+            <a href="test-ipc.html" class="nav-item">
+                <i>💻</i>
+                <span>Test IPC</span>
+            </a>
+            <a href="su-vu.html" class="nav-item">
+                <i>⚠️</i>
+                <span>Sự Vụ</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>📈</i>
+                <span>Báo Cáo</span>
+            </a>
+            <a href="cai-dat.html" class="nav-item" id="navSettings" style="display:none">
+                <i>⚙️</i>
+                <span>Cài Đặt</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="#" class="nav-item logout" id="logoutBtn">
+                <i>🚪</i>
+                <span>Đăng Xuất</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Lớp phủ tối khi mở sidebar trên mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ============================== MAIN CONTENT ============================== -->
+    <div class="main-content">
+
+        <!-- ---------- HEADER ---------- -->
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" id="menuToggle" aria-label="Mở menu">
+                    <i>☰</i>
+                </button>
+                <div class="header-logo">
+                    <i>⚡</i>
+                    <span><b>RB Control</b> Tracking</span>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <!-- Đồng hồ ngày giờ hiện tại -->
+                <div class="header-clock">
+                    <i>🕐</i>
+                    <div>
+                        <div class="clock-time" id="clockTime">--:--:--</div>
+                        <div class="clock-date" id="clockDate">--/--/----</div>
+                    </div>
+                </div>
+
+                <div class="header-divider"></div>
+
+                <!-- Thông tin người dùng đang đăng nhập -->
+                <div class="header-user">
+                    <div class="user-avatar" id="userAvatar">K</div>
+                    <div class="user-meta">
+                        <div class="user-name" id="userName">Đang tải...</div>
+                        <div class="user-role" id="userRole">--</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ---------- NỘI DUNG DASHBOARD ---------- -->
+        <main class="page-body">
+
+            <div class="page-heading">
+                <h2>Tổng quan hệ thống</h2>
+                <p>Số liệu tổng hợp toàn bộ trạm, trụ, thiết bị IPC và sự vụ đang được theo dõi.</p>
+            </div>
+
+            <!-- 4 thẻ thống kê nhanh -->
+            <section class="stats-grid" id="statsGrid">
+                <!-- Nội dung được render bằng JavaScript (js/dashboard.js) -->
+            </section>
+
+            <!-- Bảng sự vụ mới nhất -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h3><i>🕘</i> Sự vụ mới nhất</h3>
+                    <a href="su-vu.html" class="panel-link">
+                        Xem tất cả <i>→</i>
+                    </a>
+                </div>
+
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Mã Trạm</th>
+                                <th>Mã Trụ</th>
+                                <th>Lỗi</th>
+                                <th>Trạng thái</th>
+                                <th>Thời gian</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incidentsBody">
+                            <!-- Nội dung được render bằng JavaScript (js/dashboard.js) -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<!-- JavaScript riêng của trang Dashboard -->
+<script src="js/dashboard.js"></script>
+</body>
+</html>
