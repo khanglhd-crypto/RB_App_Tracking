@@ -712,6 +712,7 @@
         const infoPayload = { pillar, model, source, factory, ver, tester, result, reason, time, soAnh: selectedImages.length };
         let fileNames   = selectedImages.map((_, i) => `${safeName}_${i + 1}.jpg`);
         let folderLabel = 'Downloads (mặc định)';
+        let fallbackReason = null; // khác null nghĩa là KHÔNG ghi được vào thư mục đã chọn, phải cảnh báo rõ cho người dùng
 
         if (window.showDirectoryPicker) {
             try {
@@ -735,6 +736,7 @@
                 if (err.name === 'AbortError') { setSaveBtn(false); return; }
                 selectedImages.forEach((img, i) => { setTimeout(() => { const a = Object.assign(document.createElement('a'), { href: img.base64, download: fileNames[i] }); document.body.appendChild(a); a.click(); a.remove(); }, i * 300); });
                 folderLabel = 'Downloads (mặc định - không ghi được vào thư mục đã chọn)';
+                fallbackReason = err.message || err.name || 'Không rõ lý do';
             }
         } else {
             alert('Trình duyệt không hỗ trợ chọn thư mục.\nẢnh sẽ tự tải về Downloads.');
@@ -754,6 +756,11 @@
         await refreshHistoryData();
         currentReportFolder = safeName;
         currentReportRecordId = saveRes.id;
+
+        if (fallbackReason) {
+            alert(`⚠️ CHÚ Ý: đã lưu vào danh sách chung thành công, NHƯNG ảnh KHÔNG ghi được vào thư mục "${CHARGE_POINT_NAME}" đã chọn (có thể do Google Drive for Desktop chưa mở/chưa đồng bộ, hoặc mất quyền ghi).\n\nẢnh đã được tự động tải về thư mục Downloads của máy này thay thế — hãy tự copy sang đúng thư mục Shared Drive.\n\nChi tiết lỗi: ${fallbackReason}`);
+        }
+
         switchTab('report');
         $('rpt-pillar').value  = pillar;
         $('rpt-factory').value = factory;
