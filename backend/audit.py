@@ -10,7 +10,7 @@ không có session/token phía server nên đây là cách duy nhất để bi�
 đang thao tác.
 """
 
-import pymysql
+import psycopg2
 from flask import request
 
 from database.db import get_connection
@@ -30,5 +30,5 @@ def log_action(module, action, target="", detail=""):
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError:
+    except psycopg2.Error:
         pass

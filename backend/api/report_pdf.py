@@ -17,7 +17,7 @@ import subprocess
 import sys
 import tempfile
 
-import pymysql
+import psycopg2
 from flask import Blueprint, jsonify, request, send_file
 
 from audit import log_action
@@ -156,7 +156,7 @@ def export_report_pdf():
                     )
             finally:
                 connection.close()
-        except pymysql.MySQLError as err:
+        except psycopg2.Error as err:
             # PDF đã xuất thành công, chỉ không lưu được liên kết để mở lại sau này
             return jsonify({
                 "ok": True,
@@ -190,7 +190,7 @@ def view_pillar_pdf():
                 row = cursor.fetchone()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     if not row or not row["pdf_path"]:

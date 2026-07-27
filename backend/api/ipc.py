@@ -19,7 +19,7 @@ import os
 import re
 from datetime import datetime
 
-import pymysql
+import psycopg2
 from flask import Blueprint, jsonify, request, send_file
 
 from audit import log_action
@@ -87,7 +87,7 @@ def ipc_list():
                 rows = cursor.fetchall()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     return jsonify({"ok": True, "items": [_row_to_item(r) for r in rows]})
@@ -122,7 +122,7 @@ def ipc_save():
                     """INSERT INTO ipc_list
                        (sn, anydesk, ultraview, note, status,
                         sn_photo_path, anydesk_photo_path, ultraview_photo_path, time_label)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""",
                     (
                         sn,
                         data.get("anydesk") or "",
@@ -135,12 +135,12 @@ def ipc_save():
                         time_label,
                     ),
                 )
-                new_id = cursor.lastrowid
+                new_id = cursor.fetchone()["id"]
         finally:
             connection.close()
-    except pymysql.err.IntegrityError:
+    except psycopg2.errors.UniqueViolation:
         return jsonify({"ok": False, "error": f"Mã SN \"{sn}\" đã tồn tại"}), 400
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("ipc", "create", target=sn)
@@ -163,7 +163,7 @@ def ipc_photo():
                 row = cursor.fetchone()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     if not row or not row["photo_path"]:
@@ -191,7 +191,7 @@ def ipc_status():
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("ipc", "update", target=str(record_id), detail=f"status={status}")
@@ -212,7 +212,7 @@ def ipc_delete():
                 cursor.execute("DELETE FROM ipc_list WHERE id = %s", (record_id,))
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("ipc", "delete", target=str(record_id))

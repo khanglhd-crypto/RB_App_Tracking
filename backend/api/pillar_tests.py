@@ -11,7 +11,7 @@ Exposes:
 import json
 from datetime import datetime
 
-import pymysql
+import psycopg2
 from flask import Blueprint, jsonify, request
 
 from audit import log_action
@@ -33,7 +33,7 @@ def _row_to_item(row):
         "reason": row["reason"] or "",
         "time": row["time_label"],
         "folderName": row["folder_name"],
-        "fileNames": json.loads(row["file_names"]) if row["file_names"] else [],
+        "fileNames": row["file_names"] or [],
         "shipStatus": row["ship_status"] or "",
         "hasPdf": bool(row["pdf_path"]),
     }
@@ -49,7 +49,7 @@ def history():
                 rows = cursor.fetchall()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     return jsonify({"ok": True, "items": [_row_to_item(r) for r in rows]})
@@ -76,7 +76,7 @@ def save_pillar():
                     """INSERT INTO pillar_tests
                        (pillar, model, source, factory, ver, tester, result, reason,
                         time_label, folder_name, file_names, ship_status)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'')""",
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'') RETURNING id""",
                     (
                         pillar,
                         info.get("model") or "",
@@ -91,10 +91,10 @@ def save_pillar():
                         json.dumps(file_names, ensure_ascii=False),
                     ),
                 )
-                new_id = cursor.lastrowid
+                new_id = cursor.fetchone()["id"]
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("test_tru", "create", target=pillar, detail=f"result={info.get('result') or ''}")
@@ -115,7 +115,7 @@ def delete_pillar():
                 cursor.execute("DELETE FROM pillar_tests WHERE id = %s", (record_id,))
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("test_tru", "delete", target=str(record_id))
@@ -140,7 +140,7 @@ def set_ship_status():
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("test_tru", "update", target=str(record_id), detail=f"ship_status={status}")

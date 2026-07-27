@@ -11,7 +11,7 @@ Exposes:
 import json
 from datetime import datetime
 
-import pymysql
+import psycopg2
 from flask import Blueprint, jsonify, request
 
 from audit import log_action
@@ -31,7 +31,7 @@ def _row_to_item(row):
         "ktvNghiemThu": row["ktv_nghiem_thu"] or "",
         "trangThai": row["trang_thai"] or "hoat-dong",
         "time": row["time_label"],
-        "tramNho": json.loads(row["tram_nho"]) if row["tram_nho"] else [],
+        "tramNho": row["tram_nho"] or [],
     }
 
 
@@ -78,7 +78,7 @@ def tram_list():
                 _enrich_nghiem_thu_pdf(items, cursor)
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     return jsonify({"ok": True, "items": items})
@@ -101,7 +101,7 @@ def tram_save():
                     """INSERT INTO tram_tong
                        (ma_tong, loai_tram, ten_chu_tram, sdt_lien_he, dia_chi,
                         ktv_nghiem_thu, trang_thai, tram_nho, time_label)
-                       VALUES (%s,%s,%s,%s,%s,%s,'hoat-dong',%s,%s)""",
+                       VALUES (%s,%s,%s,%s,%s,%s,'hoat-dong',%s,%s) RETURNING id""",
                     (
                         ma_tong,
                         data.get("loaiTram") or "",
@@ -113,12 +113,12 @@ def tram_save():
                         time_label,
                     ),
                 )
-                new_id = cursor.lastrowid
+                new_id = cursor.fetchone()["id"]
         finally:
             connection.close()
-    except pymysql.err.IntegrityError:
+    except psycopg2.errors.UniqueViolation:
         return jsonify({"ok": False, "error": f"Mã trạm tổng \"{ma_tong}\" đã tồn tại"}), 400
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("on_tram", "create", target=ma_tong)
@@ -142,7 +142,7 @@ def tram_status():
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("on_tram", "update", target=str(record_id), detail=f"trang_thai={status}")
@@ -163,7 +163,7 @@ def tram_delete():
                 cursor.execute("DELETE FROM tram_tong WHERE id = %s", (record_id,))
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("on_tram", "delete", target=str(record_id))

@@ -22,7 +22,7 @@ Exposes:
 """
 
 import bcrypt
-import pymysql
+import psycopg2
 from flask import Blueprint, jsonify, request
 
 from audit import log_action
@@ -62,7 +62,7 @@ def login():
                 user = cursor.fetchone()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({
             "success": False,
             "message": f"Lỗi kết nối cơ sở dữ liệu: {err}",
@@ -122,18 +122,18 @@ def register():
         try:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "INSERT INTO users (username, password_hash, fullname, role, email, status) VALUES (%s,%s,'','viewer',%s,'pending')",
+                    "INSERT INTO users (username, password_hash, fullname, role, email, status) VALUES (%s,%s,'','viewer',%s,'pending') RETURNING id",
                     (username, password_hash, email),
                 )
-                new_id = cursor.lastrowid
+                new_id = cursor.fetchone()["id"]
         finally:
             connection.close()
-    except pymysql.err.IntegrityError:
+    except psycopg2.errors.UniqueViolation:
         return jsonify({
             "success": False,
             "message": f"Tài khoản \"{username}\" hoặc email \"{email}\" đã được đăng ký trước đó",
         }), 400
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"success": False, "message": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("users", "create", target=username, detail=f"tự đăng ký, email={email}")
@@ -158,7 +158,7 @@ def users_list():
                 rows = cursor.fetchall()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     items = [{
@@ -191,7 +191,7 @@ def users_approve():
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("users", "update", target=str(record_id), detail="duyệt tài khoản")
@@ -218,7 +218,7 @@ def users_role():
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("users", "update", target=str(record_id), detail=f"role={role}")
@@ -245,7 +245,7 @@ def users_delete():
                 cursor.execute("DELETE FROM users WHERE id = %s", (record_id,))
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("users", "delete", target=deleted_username or str(record_id))

@@ -7,7 +7,7 @@ Exposes:
                            toàn bộ app, mới nhất trước.
 """
 
-import pymysql
+import psycopg2
 from flask import Blueprint, jsonify, request
 
 from database.db import get_connection
@@ -32,7 +32,7 @@ def audit_log_list():
                 rows = cursor.fetchall()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     items = [{

@@ -16,7 +16,7 @@ Exposes:
 import os
 from datetime import datetime
 
-import pymysql
+import psycopg2
 from flask import Blueprint, jsonify, request, send_file
 
 from audit import log_action
@@ -48,7 +48,7 @@ def suvu_list():
                 rows = cursor.fetchall()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     return jsonify({"ok": True, "items": [_row_to_item(r) for r in rows]})
@@ -72,13 +72,13 @@ def suvu_save():
             with connection.cursor() as cursor:
                 cursor.execute(
                     """INSERT INTO su_vu (ma_tram, ma_tru, mo_ta, trang_thai, muc_do, time_label)
-                       VALUES (%s,%s,%s,'chua-xu-ly',%s,%s)""",
+                       VALUES (%s,%s,%s,'chua-xu-ly',%s,%s) RETURNING id""",
                     (ma_tram, ma_tru, mo_ta, muc_do, time_label),
                 )
-                new_id = cursor.lastrowid
+                new_id = cursor.fetchone()["id"]
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("su_vu", "create", target=f"{ma_tram}/{ma_tru}", detail=mo_ta[:200])
@@ -102,7 +102,7 @@ def suvu_status():
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("su_vu", "update", target=str(record_id), detail=f"trang_thai={status}")
@@ -126,7 +126,7 @@ def suvu_mucdo():
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("su_vu", "update", target=str(record_id), detail=f"muc_do={muc_do}")
@@ -182,7 +182,7 @@ def pillar_detail():
                         result["lastRepair"] = {"time": row["time_label"], "moTa": row["mo_ta"]}
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     return jsonify(result)
@@ -205,7 +205,7 @@ def suvu_set_pdf():
                 )
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("su_vu", "export", target=str(record_id), detail="Phiếu Xử Lý Sự Cố")
@@ -226,7 +226,7 @@ def view_suvu_pdf():
                 row = cursor.fetchone()
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     if not row or not row["xu_ly_pdf_path"]:
@@ -251,7 +251,7 @@ def suvu_delete():
                 cursor.execute("DELETE FROM su_vu WHERE id = %s", (record_id,))
         finally:
             connection.close()
-    except pymysql.MySQLError as err:
+    except psycopg2.Error as err:
         return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
 
     log_action("su_vu", "delete", target=str(record_id))
