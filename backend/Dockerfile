@@ -6,13 +6,20 @@
 # requirements.txt — nếu Docker Hub báo không tìm thấy tag này, vào
 # https://mcr.microsoft.com/en-us/artifact/mar/playwright/python/tags
 # để lấy đúng tag gần nhất rồi sửa dòng FROM bên dưới.
+#
+# QUAN TRỌNG: build context là GỐC REPO (Root Directory trên Render để trống,
+# Dockerfile Path = backend/Dockerfile) — vì cần COPY cả backend/ lẫn frontend/
+# (server.py phục vụ frontend luôn, 2 thư mục này nằm ngang hàng nhau).
 FROM mcr.microsoft.com/playwright/python:v1.61.0-jammy
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
-COPY . .
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+
+WORKDIR /app/backend
 
 CMD gunicorn server:app --bind 0.0.0.0:$PORT
