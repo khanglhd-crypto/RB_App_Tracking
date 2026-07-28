@@ -10,8 +10,25 @@
     /* ----------------------------------------------------------------------
        1. API (Flask backend — URL cấu hình trong js/config.js, load trước file này)
        ---------------------------------------------------------------------- */
+    /* Backend đôi lúc phản hồi rất chậm (Shared Drive đồng bộ chậm, mạng yếu...)
+       — không giới hạn thời gian thì request sẽ treo vô thời hạn mà không báo
+       lỗi gì. Tự hủy sau 25s và báo rõ nguyên nhân thường gặp nhất. */
+    function fetchWithTimeout(url, options, timeoutMs = 25000) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { ...(options || {}), signal: controller.signal })
+            .catch(err => {
+                if (err.name === 'AbortError') {
+                    const friendly = new Error('Máy chủ phản hồi quá lâu (có thể do Shared Drive đồng bộ chậm hoặc mạng yếu). Kiểm tra rồi thử lại.');
+                    friendly.name = 'AbortError';
+                    throw friendly;
+                }
+                throw err;
+            })
+            .finally(() => clearTimeout(timer));
+    }
     async function apiGet(path) {
-        const res  = await fetch(`${API_BASE}/${path}`);
+        const res  = await fetchWithTimeout(`${API_BASE}/${path}`);
         const data = await res.json().catch(() => null);
         if (!res.ok || !data || data.ok === false) throw new Error((data && data.error) || 'Lỗi máy chủ');
         return data;
