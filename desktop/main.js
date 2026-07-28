@@ -7,17 +7,21 @@ const { spawn } = require('child_process');
 const PORT = 5678;
 const APP_URL = `http://127.0.0.1:${PORT}/login.html`;
 
-// Thư mục Shared Drive dùng làm nơi lưu dữ liệu chung (đồng bộ qua Google
-// Drive for Desktop) — ĐỔI lại các dòng này nếu máy nào gắn ổ Shared Drive
-// khác chữ cái (không phải G:) hoặc tên thư mục khác.
+// Google Drive for Desktop gắn "Shared drives" vào một ổ đĩa riêng trên MỖI
+// MÁY — chữ cái ổ đĩa KHÔNG cố định giống nhau giữa các máy (tùy máy đó đã
+// dùng hết ổ nào). Vì vậy KHÔNG hardcode chữ ổ đĩa — tự dò qua tất cả các ổ
+// đang có trên máy, tìm ổ nào chứa đúng thư mục Shared Drive tên
+// "Charge Station Documents" thì dùng ổ đó.
 //
 // DATA_ROOT: nơi lưu các bản ghi JSON (users, pillar_tests, tram_tong...) —
 // thư mục riêng, không ảnh hưởng gì tới cấu trúc thư mục ảnh/PDF cũ.
 // FILES_ROOT: PHẢI trỏ đúng vào thư mục "List End Of Line Test" đã dùng từ
 // trước tới giờ (chứa sẵn thư mục con "Charge Point") — để PDF/ảnh xuất ra
 // tiếp tục lưu đúng chỗ cũ, không tạo thư mục "Charge Point" mới ở nơi khác.
-const DATA_ROOT = 'G:\\Shared drives\\Charge Station Documents\\App Data';
-const FILES_ROOT = 'G:\\Shared drives\\Charge Station Documents\\List End Of Line Test';
+const SHARED_DRIVE_NAME = 'Charge Station Documents';
+
+let DATA_ROOT = null;
+let FILES_ROOT = null;
 
 let backendProcess = null;
 let mainWindow = null;
@@ -29,15 +33,28 @@ function getBackendExePath() {
   return path.join(base, 'rb-control-backend.exe');
 }
 
+// Dò qua các ổ đĩa C: tới Z: (bỏ qua A/B — ổ đĩa mềm cũ), tìm ổ nào có
+// "<ổ>:\Shared drives\Charge Station Documents" thì trả về đường dẫn đó.
+function findSharedDriveRoot() {
+  for (let code = 'C'.charCodeAt(0); code <= 'Z'.charCodeAt(0); code++) {
+    const letter = String.fromCharCode(code);
+    const candidate = `${letter}:\\Shared drives\\${SHARED_DRIVE_NAME}`;
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
 function checkDataRoot() {
-  const parent = path.dirname(DATA_ROOT);
-  if (!fs.existsSync(parent)) {
+  const sharedRoot = findSharedDriveRoot();
+  if (!sharedRoot) {
     throw new Error(
-      `Không tìm thấy thư mục Shared Drive:\n${parent}\n\n` +
-      `Kiểm tra lại: Google Drive for Desktop đã mở chưa, và ổ đĩa Shared Drive ` +
-      `có đúng chữ cái/tên như cấu hình trong app không.`
+      `Không tìm thấy Shared Drive "${SHARED_DRIVE_NAME}" ở ổ đĩa nào trên máy này.\n\n` +
+      `Kiểm tra lại: Google Drive for Desktop đã mở và đăng nhập đúng tài khoản có quyền ` +
+      `vào Shared Drive "${SHARED_DRIVE_NAME}" chưa, và đã đồng bộ xong chưa.`
     );
   }
+  DATA_ROOT = path.join(sharedRoot, 'App Data');
+  FILES_ROOT = path.join(sharedRoot, 'List End Of Line Test');
   fs.mkdirSync(DATA_ROOT, { recursive: true });
   fs.mkdirSync(FILES_ROOT, { recursive: true });
 }
