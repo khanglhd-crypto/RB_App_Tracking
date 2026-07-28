@@ -25,6 +25,12 @@
       "icon.ico",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "backend-dist/rb-control-backend",
+        "to": "backend-dist/rb-control-backend"
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "icon.ico",

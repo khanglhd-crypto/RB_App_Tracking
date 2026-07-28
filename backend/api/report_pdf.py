@@ -13,11 +13,9 @@ import base64
 import json
 import os
 import re
-import subprocess
-import sys
-import tempfile
 
 from flask import Blueprint, jsonify, request, send_file
+from playwright.sync_api import sync_playwright
 
 from audit import log_action
 from database import filestore
@@ -27,7 +25,6 @@ report_pdf_bp = Blueprint("report_pdf", __name__, url_prefix="/api")
 PILLAR_COLLECTION = "pillar_tests"
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server_config.json")
-WORKER_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "pdf_worker.py")
 DEFAULT_BASE_FOLDER = "Charge Point"
 
 # Cột hợp lệ để ghi/đọc đường dẫn PDF trên pillar_tests — whitelist tránh SQL injection
@@ -118,28 +115,19 @@ def export_report_pdf():
 
     pdf_path = os.path.join(target_dir, f"{_safe_name(report_name)}_{_safe_name(pillar)}.pdf")
 
-    # Render bằng 1 tiến trình con riêng (pdf_worker.py) thay vì gọi Playwright
-    # ngay trong tiến trình Flask — tránh bị ảnh hưởng khi Flask tự reload.
-    tmp_html_path = None
+    # Chạy Chromium (Playwright) ngay trong tiến trình này — app chạy offline,
+    # không còn Flask reloader nên không cần tách tiến trình con riêng nữa.
     try:
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False, encoding="utf-8") as tmp:
-            tmp.write(html)
-            tmp_html_path = tmp.name
-
-        result = subprocess.run(
-            [sys.executable, WORKER_PATH, tmp_html_path, pdf_path],
-            capture_output=True, text=True, timeout=60,
-        )
-        if result.returncode != 0:
-            return jsonify({"ok": False, "error": f"Không xuất được PDF: {result.stderr.strip()}"}), 500
-    except subprocess.TimeoutExpired:
-        return jsonify({"ok": False, "error": "Xuất PDF quá thời gian chờ (60s)"}), 500
-    finally:
-        if tmp_html_path:
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
             try:
-                os.remove(tmp_html_path)
-            except OSError:
-                pass
+                page = browser.new_page()
+                page.set_content(html, wait_until="load")
+                page.pdf(path=pdf_path, format="A4", print_background=True)
+            finally:
+                browser.close()
+    except Exception as err:
+        return jsonify({"ok": False, "error": f"Không xuất được PDF: {err}"}), 500
 
     module = MODULE_BY_BASE_FOLDER.get(base_folder)
     if module:

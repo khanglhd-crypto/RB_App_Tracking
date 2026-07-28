@@ -1,10 +1,12 @@
 -- ============================================================
--- RB Control Tracking System — Database Schema
--- Target   : PostgreSQL 14+ (Supabase)
+-- RB Control Tracking System — CẤU TRÚC DỮ LIỆU (tài liệu tham khảo)
 -- ============================================================
--- Chạy toàn bộ file này trong Supabase → SQL Editor → New query.
--- Supabase đã tự cấp sẵn 1 database, không cần CREATE DATABASE/USE
--- như MySQL trước đây.
+-- LƯU Ý: file này KHÔNG còn được chạy thật nữa — app đã chuyển sang lưu
+-- file JSON (mỗi bản ghi 1 file, xem backend/database/filestore.py) để
+-- chạy offline, đồng bộ nhiều máy qua Google Drive/Shared Drive thay vì
+-- 1 database SQL chung. Giữ file này lại chỉ để tham khảo tên trường/kiểu
+-- dữ liệu của từng "collection" (users, pillar_tests, ipc_list, tram_tong,
+-- su_vu, audit_log) — tên bảng SQL bên dưới ứng với tên thư mục JSON.
 -- ============================================================
 
 -- ------------------------------------------------------------
