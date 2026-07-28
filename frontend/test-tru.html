@@ -96,27 +96,6 @@
         #res-pass:checked + label { background: var(--success); border-color: var(--success); }
         #res-fail:checked + label { background: var(--danger);  border-color: var(--danger); }
 
-        /* Image upload */
-        .image-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .btn-action-img {
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            padding: 9px 6px; border: 1px dashed var(--primary);
-            background: #f5f3ff; color: var(--primary);
-            border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: background .2s;
-        }
-        .btn-action-img:hover { background: #ede9fe; }
-
-        #preview-box { display: none; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #f9fafb; margin-bottom: 12px; }
-        .preview-count { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
-        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px,1fr)); gap: 6px; }
-        .preview-thumb { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
-        .preview-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .preview-thumb .remove-thumb {
-            position: absolute; top: 2px; right: 2px;
-            background: rgba(0,0,0,.55); color: #fff; border: none; border-radius: 50%;
-            width: 18px; height: 18px; font-size: 10px; cursor: pointer; line-height: 18px; text-align: center;
-        }
-
         .btn-save {
             width: 100%; background: var(--primary); color: #fff;
             border: none; padding: 12px; border-radius: 6px;
@@ -349,27 +328,6 @@
                         <label for="fail-reason">Nguyên nhân</label>
                         <textarea id="fail-reason" rows="3" placeholder="Nhập nguyên nhân lỗi..."></textarea>
                     </div>
-                    <div class="form-group">
-                        <label>Hình ảnh kiểm tra thực tế</label>
-                        <div class="image-actions">
-                            <div class="btn-action-img" onclick="document.getElementById('camera-input').click()">
-                                <i>📷</i> Chụp ảnh
-                            </div>
-                            <div class="btn-action-img" onclick="document.getElementById('files-input').click()">
-                                <i>📸</i> Nhiều ảnh
-                            </div>
-                            <div class="btn-action-img" onclick="document.getElementById('folder-input').click()">
-                                <i>📂</i> Cả thư mục
-                            </div>
-                        </div>
-                        <input type="file" id="camera-input" accept="image/*" capture="environment" hidden>
-                        <input type="file" id="files-input" accept="image/*" multiple hidden>
-                        <input type="file" id="folder-input" accept="image/*" webkitdirectory multiple hidden>
-                        <div id="preview-box">
-                            <div class="preview-count" id="preview-count"></div>
-                            <div class="preview-grid" id="preview-grid"></div>
-                        </div>
-                    </div>
                     <button type="submit" class="btn-save" id="btn-save">
                         <i>💾</i> Lưu &amp; Xem Danh Sách Trụ
                     </button>
@@ -423,10 +381,9 @@
     <div class="modal-box">
         <div class="modal-icon"><i>📂</i></div>
         <h3>Đặt tên thư mục</h3>
-        <p>Ảnh sẽ được lưu ngay trên máy này, trong thư mục <strong>Charge Point</strong> bạn đã chọn.</p>
+        <p>Tên thư mục dùng khi xuất Phiếu Ảnh/PDF cho trụ này trong thư mục <strong>Charge Point</strong>.</p>
         <div class="modal-label">Tên thư mục</div>
         <input class="modal-input" type="text" id="modal-folder-name" placeholder="Tên thư mục...">
-        <div id="modal-server-status" style="font-size:12px;color:#6b7280;margin:-10px 0 18px"></div>
         <div class="modal-actions">
             <button class="modal-btn-secondary" id="modal-btn-cancel">Hủy</button>
             <button class="modal-btn-primary" id="modal-btn-pick">
@@ -440,8 +397,6 @@
     const $ = id => document.getElementById(id);
 
     /* ─── API (Flask backend — URL cấu hình trong js/config.js) ─── */
-    const CHARGE_POINT_NAME = 'Charge Point';
-
     async function apiGet(path) {
         const res  = await fetch(`${API_BASE}/${path}`);
         const data = await res.json().catch(() => null);
@@ -480,76 +435,9 @@
     }
 
     /* Metadata (không kèm ảnh) được lưu vào MySQL để mọi máy thấy chung danh sách.
-       Ảnh thật thì lưu ngay trên máy người dùng đang bấm nút, xem phần "Lưu ảnh cục bộ" bên dưới. */
+       Ảnh thật (Phiếu Ảnh) do backend lưu trực tiếp vào Shared Drive khi xuất PDF. */
     function saveMetaToServer(folderLabel, fileNames, info) {
         return apiPost('save-pillar.php', { folderLabel, fileNames, info });
-    }
-
-    /* ─── Lưu ảnh cục bộ trên máy người dùng (File System Access API) ─── */
-    const IDB_DB_NAME  = 'evse_fs_handles';
-    const IDB_STORE     = 'handles';
-    const IDB_ROOT_KEY  = 'eolRootHandle';
-    let eolRootHandle = null;
-
-    function idbOpen() {
-        return new Promise((resolve, reject) => {
-            const req = indexedDB.open(IDB_DB_NAME, 1);
-            req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        });
-    }
-    async function idbSet(key, value) {
-        const db = await idbOpen();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(IDB_STORE, 'readwrite');
-            tx.objectStore(IDB_STORE).put(value, key);
-            tx.oncomplete = () => resolve();
-            tx.onerror = () => reject(tx.error);
-        });
-    }
-    async function idbGet(key) {
-        const db = await idbOpen();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(IDB_STORE, 'readonly');
-            const req = tx.objectStore(IDB_STORE).get(key);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        });
-    }
-
-    async function verifyPermission(handle, mode = 'readwrite') {
-        const opts = { mode };
-        if ((await handle.queryPermission(opts)) === 'granted') return true;
-        try { if ((await handle.requestPermission(opts)) === 'granted') return true; } catch (_) {}
-        return false;
-    }
-
-    /* Trả về handle thư mục "Charge Point" NGAY TRÊN MÁY ĐANG DÙNG (chính là thư mục
-       người dùng đã chọn, không tạo thêm thư mục con nào nữa).
-       Chỉ hỏi chọn thư mục 1 lần/máy (hoặc khi bấm "Đổi thư mục"), sau đó tự nhớ. */
-    async function getChargePointHandle({ forcePick = false } = {}) {
-        if (!forcePick) {
-            if (!eolRootHandle) {
-                try { eolRootHandle = await idbGet(IDB_ROOT_KEY); } catch (_) {}
-            }
-            if (eolRootHandle && await verifyPermission(eolRootHandle)) {
-                return eolRootHandle;
-            }
-        }
-        const picked = await window.showDirectoryPicker({ mode: 'readwrite' });
-        eolRootHandle = picked;
-        try { await idbSet(IDB_ROOT_KEY, picked); } catch (_) {}
-        return picked;
-    }
-
-    function base64ToBlob(base64) {
-        const [header, data] = base64.split(',');
-        const mime = header.match(/:(.*?);/)[1];
-        const bytes = atob(data);
-        const arr = new Uint8Array(bytes.length);
-        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-        return new Blob([arr], { type: mime });
     }
 
     /* ─── Bộ nhớ dùng chung: danh sách trụ lấy từ MySQL, mọi máy thấy như nhau ─── */
@@ -576,36 +464,6 @@
         if (name === 'report') initReportTab();
     }
 
-    /* ─── Preview images ─── */
-    const previewBox   = $('preview-box');
-    const previewGrid  = $('preview-grid');
-    const previewCount = $('preview-count');
-    let selectedImages = [];
-
-    function readFiles(fileList) {
-        const imgs = Array.from(fileList).filter(f => f.type.startsWith('image/'));
-        if (!imgs.length) return;
-        Promise.all(imgs.map(file => new Promise(resolve => {
-            const r = new FileReader();
-            r.onload = e => resolve({ base64: e.target.result, name: file.name });
-            r.readAsDataURL(file);
-        }))).then(results => { selectedImages.push(...results); renderPreview(); });
-    }
-
-    function renderPreview() {
-        if (!selectedImages.length) { previewBox.style.display = 'none'; return; }
-        previewBox.style.display = 'block';
-        previewCount.textContent = `${selectedImages.length} ảnh đã chọn`;
-        previewGrid.innerHTML = selectedImages.map((img, i) => `
-            <div class="preview-thumb">
-                <img src="${img.base64}" alt="${img.name}">
-                <button class="remove-thumb" onclick="removeImage(${i})">✕</button>
-            </div>
-        `).join('');
-    }
-
-    function removeImage(i) { selectedImages.splice(i, 1); renderPreview(); }
-
     /* ─── Fail reason toggle ─── */
     function toggleFailReason() {
         const isFail = $('res-fail').checked;
@@ -613,10 +471,6 @@
         if (!isFail) $('fail-reason').value = '';
     }
     document.querySelectorAll('input[name="result"]').forEach(r => r.addEventListener('change', toggleFailReason));
-
-    [$('camera-input'), $('files-input'), $('folder-input')].forEach(input => {
-        input.addEventListener('change', function () { readFiles(this.files); this.value = ''; });
-    });
 
     /* ─── Helpers ─── */
     function compressImage(base64, maxW = 200, quality = 0.65) {
@@ -649,25 +503,10 @@
             const nameInput = $('modal-folder-name');
             const btnPick   = $('modal-btn-pick');
             const btnCancel = $('modal-btn-cancel');
-            const statusBox = $('modal-server-status');
 
             nameInput.value = suggestedName;
             modal.classList.add('open');
             nameInput.focus(); nameInput.select();
-
-            function renderStatus() {
-                if (eolRootHandle) {
-                    statusBox.innerHTML = `<span style="color:#059669"><i>✅</i> Sẽ lưu vào máy này: <strong>${eolRootHandle.name}</strong></span> <a href="#" id="modal-change-root" style="color:var(--primary);font-weight:600;margin-left:6px">Đổi thư mục</a>`;
-                } else {
-                    statusBox.innerHTML = `<span style="color:#d97706"><i>ℹ️</i> Lần đầu trên máy này: hãy chọn thư mục "${CHARGE_POINT_NAME}" khi bấm Lưu</span>`;
-                }
-                const changeLink = $('modal-change-root');
-                if (changeLink) changeLink.onclick = async (e) => {
-                    e.preventDefault();
-                    try { await getChargePointHandle({ forcePick: true }); renderStatus(); } catch (_) {}
-                };
-            }
-            renderStatus();
 
             btnPick.onclick = () => {
                 const folderName = nameInput.value.trim() || suggestedName;
@@ -709,57 +548,21 @@
         }
 
         const safeName    = chosenName.replace(/[<>:"/\\|?*]/g, '_');
-        const infoPayload = { pillar, model, source, factory, ver, tester, result, reason, time, soAnh: selectedImages.length };
-        let fileNames   = selectedImages.map((_, i) => `${safeName}_${i + 1}.jpg`);
-        let folderLabel = 'Downloads (mặc định)';
-        let fallbackReason = null; // khác null nghĩa là KHÔNG ghi được vào thư mục đã chọn, phải cảnh báo rõ cho người dùng
-
-        if (window.showDirectoryPicker) {
-            try {
-                const chargePointHandle = await getChargePointHandle();
-                const subHandle = await chargePointHandle.getDirectoryHandle(safeName, { create: true });
-                const imgNames  = selectedImages.map((_, i) => `${safeName}_${i + 1}.jpg`);
-                for (let i = 0; i < selectedImages.length; i++) {
-                    const fh = await subHandle.getFileHandle(imgNames[i], { create: true });
-                    const w  = await fh.createWritable();
-                    await w.write(base64ToBlob(selectedImages[i].base64));
-                    await w.close();
-                }
-                const infoName = `${safeName}_info.json`;
-                const infoFh   = await subHandle.getFileHandle(infoName, { create: true });
-                const infoW    = await infoFh.createWritable();
-                await infoW.write(new Blob([JSON.stringify(infoPayload, null, 2)], { type: 'application/json' }));
-                await infoW.close();
-                folderLabel = `${eolRootHandle.name} / ${safeName}`;
-                fileNames   = [...imgNames, infoName];
-            } catch (err) {
-                if (err.name === 'AbortError') { setSaveBtn(false); return; }
-                selectedImages.forEach((img, i) => { setTimeout(() => { const a = Object.assign(document.createElement('a'), { href: img.base64, download: fileNames[i] }); document.body.appendChild(a); a.click(); a.remove(); }, i * 300); });
-                folderLabel = 'Downloads (mặc định - không ghi được vào thư mục đã chọn)';
-                fallbackReason = err.message || err.name || 'Không rõ lý do';
-            }
-        } else {
-            alert('Trình duyệt không hỗ trợ chọn thư mục.\nẢnh sẽ tự tải về Downloads.');
-            selectedImages.forEach((img, i) => { setTimeout(() => { const a = Object.assign(document.createElement('a'), { href: img.base64, download: fileNames[i] }); document.body.appendChild(a); a.click(); a.remove(); }, i * 300); });
-        }
+        const infoPayload = { pillar, model, source, factory, ver, tester, result, reason, time };
 
         let saveRes;
         try {
-            saveRes = await saveMetaToServer(safeName, fileNames, infoPayload);
+            saveRes = await saveMetaToServer(safeName, [], infoPayload);
         } catch (err) {
             setSaveBtn(false);
-            alert(`Ảnh đã lưu trên máy này, nhưng KHÔNG ghi được vào danh sách chung (MySQL):\n${err.message}\n\nHãy kiểm tra XAMPP (Apache/MySQL) rồi bấm Lưu lại.`);
+            alert(`Không lưu được vào danh sách chung:\n${err.message}\n\nHãy kiểm tra lại rồi bấm Lưu lại.`);
             return;
         }
 
-        this.reset(); selectedImages = []; renderPreview(); toggleFailReason(); setSaveBtn(false);
+        this.reset(); toggleFailReason(); setSaveBtn(false);
         await refreshHistoryData();
         currentReportFolder = safeName;
         currentReportRecordId = saveRes.id;
-
-        if (fallbackReason) {
-            alert(`⚠️ CHÚ Ý: đã lưu vào danh sách chung thành công, NHƯNG ảnh KHÔNG ghi được vào thư mục "${CHARGE_POINT_NAME}" đã chọn (có thể do Google Drive for Desktop chưa mở/chưa đồng bộ, hoặc mất quyền ghi).\n\nẢnh đã được tự động tải về thư mục Downloads của máy này thay thế — hãy tự copy sang đúng thư mục Shared Drive.\n\nChi tiết lỗi: ${fallbackReason}`);
-        }
 
         switchTab('report');
         $('rpt-pillar').value  = pillar;
@@ -1106,7 +909,6 @@ ${p(`<tr>${fullCell(13)}</tr>`, 4)}
 
     /* ─── Init ─── */
     window.addEventListener('DOMContentLoaded', async () => {
-        try { eolRootHandle = await idbGet(IDB_ROOT_KEY); } catch (_) {}
         await refreshHistoryData();
         const tabParam = new URLSearchParams(location.search).get('tab');
         switchTab(tabParam === 'list' ? 'list' : 'form');
