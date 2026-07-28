@@ -1284,7 +1284,7 @@
         const safe      = maTru.replace(/[^a-zA-Z0-9\-_]/g, '_');
         const html      = buildOtRptHTML(maTram, maTru, ipcMaster, donVi, diaDiem, ngay);
         const images    = OT_SLOTS_DEF
-            .map((s, i) => otRptImgs[i] ? { label: `${String(s.n).padStart(2,'0')}_${s.t}`, dataUrl: otRptImgs[i] } : null)
+            .map((s, i) => otRptImgs[i] ? { label: String(s.n), dataUrl: otRptImgs[i] } : null)
             .filter(Boolean);
 
         // Cấu trúc thư mục: List On Tram / <Mã Trạm> / <Mã IPC của trạm> / <Mã trụ>/

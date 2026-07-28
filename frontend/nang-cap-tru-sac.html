@@ -535,7 +535,7 @@
         const safe        = maTru.replace(/[^a-zA-Z0-9\-_]/g, '_');
         const html        = buildNcRptHTML(maTram, maTru, ipcMaster, loaiNangCap, diaDiem, ngay);
         const images      = NC_SLOTS_DEF
-            .map((s, i) => ncRptImgs[i] ? { label: `${String(s.n).padStart(2,'0')}_${s.t}`, dataUrl: ncRptImgs[i] } : null)
+            .map((s, i) => ncRptImgs[i] ? { label: String(s.n), dataUrl: ncRptImgs[i] } : null)
             .filter(Boolean);
 
         // Cấu trúc thư mục giống On Trạm: Modify Charge Point / <Mã Trạm> / <Mã IPC của trạm> / <Mã trụ>/
