@@ -219,6 +219,15 @@
     const API_URL          = API_BASE + '/login';
     const REGISTER_API_URL = API_BASE + '/register';
 
+    // Máy chủ đôi khi bị treo lâu khi ghi dữ liệu vào Shared Drive (Google Drive
+    // đồng bộ chậm/folder mới chưa "Available offline") — không giới hạn thời
+    // gian thì nút Đăng nhập/Đăng ký sẽ quay vô thời hạn mà không báo lỗi gì.
+    function fetchWithTimeout(url, options, timeoutMs = 20000) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+    }
+
     const form        = document.getElementById('loginForm');
     const usernameEl  = document.getElementById('username');
     const passwordEl  = document.getElementById('password');
@@ -306,7 +315,7 @@
         setRegisterLoading(true);
 
         try {
-            const response = await fetch(REGISTER_API_URL, {
+            const response = await fetchWithTimeout(REGISTER_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, username: username, password: password })
@@ -330,7 +339,10 @@
                 setRegisterLoading(false);
             }
         } catch (err) {
-            showRegMessage('Không thể kết nối tới máy chủ. Vui lòng kiểm tra server (cổng 5678) đã được bật chưa.', 'error');
+            const msg = err.name === 'AbortError'
+                ? 'Máy chủ phản hồi quá lâu (có thể do Shared Drive đồng bộ chậm). Kiểm tra mạng/Google Drive rồi thử lại.'
+                : 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra server (cổng 5678) đã được bật chưa.';
+            showRegMessage(msg, 'error');
             setRegisterLoading(false);
         }
     });
@@ -357,7 +369,7 @@
         setLoading(true);
 
         try {
-            const response = await fetch(API_URL, {
+            const response = await fetchWithTimeout(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: username, password: password })
@@ -389,7 +401,10 @@
                 setLoading(false);
             }
         } catch (err) {
-            showMessage('Không thể kết nối tới máy chủ. Vui lòng kiểm tra server (cổng 5678) đã được bật chưa.', 'error');
+            const msg = err.name === 'AbortError'
+                ? 'Máy chủ phản hồi quá lâu (có thể do Shared Drive đồng bộ chậm). Kiểm tra mạng/Google Drive rồi thử lại.'
+                : 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra server (cổng 5678) đã được bật chưa.';
+            showMessage(msg, 'error');
             setLoading(false);
         }
     });
