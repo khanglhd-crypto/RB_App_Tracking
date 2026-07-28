@@ -8,10 +8,16 @@ const PORT = 5678;
 const APP_URL = `http://127.0.0.1:${PORT}/login.html`;
 
 // Thư mục Shared Drive dùng làm nơi lưu dữ liệu chung (đồng bộ qua Google
-// Drive for Desktop) — ĐỔI lại 2 dòng này nếu máy nào gắn ổ Shared Drive
+// Drive for Desktop) — ĐỔI lại các dòng này nếu máy nào gắn ổ Shared Drive
 // khác chữ cái (không phải G:) hoặc tên thư mục khác.
+//
+// DATA_ROOT: nơi lưu các bản ghi JSON (users, pillar_tests, tram_tong...) —
+// thư mục riêng, không ảnh hưởng gì tới cấu trúc thư mục ảnh/PDF cũ.
+// FILES_ROOT: PHẢI trỏ đúng vào thư mục "List End Of Line Test" đã dùng từ
+// trước tới giờ (chứa sẵn thư mục con "Charge Point") — để PDF/ảnh xuất ra
+// tiếp tục lưu đúng chỗ cũ, không tạo thư mục "Charge Point" mới ở nơi khác.
 const DATA_ROOT = 'G:\\Shared drives\\Charge Station Documents\\App Data';
-const FILES_ROOT = 'G:\\Shared drives\\Charge Station Documents\\App Data\\files';
+const FILES_ROOT = 'G:\\Shared drives\\Charge Station Documents\\List End Of Line Test';
 
 let backendProcess = null;
 let mainWindow = null;

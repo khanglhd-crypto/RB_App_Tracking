@@ -1013,13 +1013,16 @@
         const safe    = pillar.replace(/[^a-zA-Z0-9\-_]/g, '_');
         const html    = buildRptHTML(factory, pillar, date);
         const folderName = currentReportFolder || safe;
+        const images = rptImgs
+            .map((img, i) => img ? { label: String(SLOTS_DEF[i].n), dataUrl: img } : null)
+            .filter(Boolean);
 
         const btn = event.currentTarget;
         const btnHtml = btn.innerHTML;
         btn.disabled = true; btn.innerHTML = '⏳ Đang xuất PDF...';
 
         try {
-            const res = await apiPostWithRetry('export-report-pdf.php', { pillar, folderName, html, id: currentReportRecordId });
+            const res = await apiPostWithRetry('export-report-pdf.php', { pillar, folderName, html, images, id: currentReportRecordId });
             alert(`✅ Đã xuất PDF và lưu vào:\n${res.path}`);
             if (currentReportRecordId) await refreshHistoryData();
         } catch (err) {
