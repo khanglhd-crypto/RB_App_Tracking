@@ -17,13 +17,14 @@ import subprocess
 import sys
 import tempfile
 
-import psycopg2
 from flask import Blueprint, jsonify, request, send_file
 
 from audit import log_action
-from database.db import get_connection
+from database import filestore
 
 report_pdf_bp = Blueprint("report_pdf", __name__, url_prefix="/api")
+
+PILLAR_COLLECTION = "pillar_tests"
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server_config.json")
 WORKER_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "pdf_worker.py")
@@ -145,23 +146,16 @@ def export_report_pdf():
         log_action(module, "export", target=pillar, detail=report_name)
 
     if record_id:
-        try:
-            connection = get_connection()
-            try:
-                with connection.cursor() as cursor:
-                    # link_column da duoc kiem tra nam trong PDF_LINK_COLUMNS (whitelist) o tren
-                    cursor.execute(
-                        f"UPDATE pillar_tests SET {link_column} = %s WHERE id = %s",
-                        (pdf_path, record_id),
-                    )
-            finally:
-                connection.close()
-        except psycopg2.Error as err:
-            # PDF đã xuất thành công, chỉ không lưu được liên kết để mở lại sau này
+        # link_column da duoc kiem tra nam trong PDF_LINK_COLUMNS (whitelist) o tren
+        row = filestore.get_record(PILLAR_COLLECTION, record_id)
+        if row:
+            row[link_column] = pdf_path
+            filestore.save_record(PILLAR_COLLECTION, record_id, row)
+        else:
             return jsonify({
                 "ok": True,
                 "path": pdf_path,
-                "warning": f"PDF đã lưu nhưng không ghi được liên kết xem lại: {err}",
+                "warning": "PDF đã lưu nhưng không tìm thấy bản ghi trụ để ghi liên kết xem lại",
             })
 
     return jsonify({"ok": True, "path": pdf_path})
@@ -181,21 +175,13 @@ def view_pillar_pdf():
     else:
         link_column = "pdf_path"
 
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                # link_column chi co 2 gia tri co dinh o tren, khong lay truc tiep tu request
-                cursor.execute(f"SELECT {link_column} AS pdf_path FROM pillar_tests WHERE id = %s", (record_id,))
-                row = cursor.fetchone()
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    # link_column chi co 2 gia tri co dinh o tren, khong lay truc tiep tu request
+    row = filestore.get_record(PILLAR_COLLECTION, record_id)
+    pdf_path = row.get(link_column) if row else None
 
-    if not row or not row["pdf_path"]:
+    if not pdf_path:
         return jsonify({"ok": False, "error": "Trụ này chưa xuất Phiếu Ảnh"}), 404
-    if not os.path.isfile(row["pdf_path"]):
+    if not os.path.isfile(pdf_path):
         return jsonify({"ok": False, "error": "Không tìm thấy file PDF trên máy chủ (có thể đã bị xóa/di chuyển)"}), 404
 
-    return send_file(row["pdf_path"], mimetype="application/pdf")
+    return send_file(pdf_path, mimetype="application/pdf")

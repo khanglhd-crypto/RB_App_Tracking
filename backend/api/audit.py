@@ -7,12 +7,15 @@ Exposes:
                            toàn bộ app, mới nhất trước.
 """
 
-import psycopg2
+from datetime import datetime
+
 from flask import Blueprint, jsonify, request
 
-from database.db import get_connection
+from database import filestore
 
 audit_bp = Blueprint("audit", __name__, url_prefix="/api")
+
+COLLECTION = "audit_log"
 
 
 @audit_bp.route("/audit-log.php", methods=["GET"])
@@ -22,27 +25,27 @@ def audit_log_list():
     except ValueError:
         limit = 200
 
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT * FROM audit_log ORDER BY id DESC LIMIT %s", (limit,)
-                )
-                rows = cursor.fetchall()
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    rows = filestore.list_records(COLLECTION)
+    rows.sort(key=lambda r: r.get("id", 0), reverse=True)
+    rows = rows[:limit]
 
     items = [{
         "id": r["id"],
-        "username": r["username"],
-        "module": r["module"],
-        "action": r["action"],
-        "target": r["target"] or "",
-        "detail": r["detail"] or "",
-        "createdAt": r["created_at"].strftime("%d/%m/%Y %H:%M:%S") if r["created_at"] else "",
+        "username": r.get("username", ""),
+        "module": r.get("module", ""),
+        "action": r.get("action", ""),
+        "target": r.get("target") or "",
+        "detail": r.get("detail") or "",
+        "createdAt": _format(r.get("created_at")),
     } for r in rows]
 
     return jsonify({"ok": True, "items": items})
+
+
+def _format(value):
+    if not value:
+        return ""
+    try:
+        return datetime.fromisoformat(value).strftime("%d/%m/%Y %H:%M:%S")
+    except ValueError:
+        return value

@@ -3,7 +3,7 @@ Authentication API.
 
 Exposes:
   POST /api/login             - verifies a username/password pair against the
-                                 `users` table (bcrypt-hashed) và kiểm tra
+                                 `users` collection (bcrypt-hashed) và kiểm tra
                                  tài khoản đã được admin duyệt (status='active')
                                  chưa, trả về hồ sơ công khai nếu hợp lệ.
   POST /api/register           - tự đăng ký tài khoản mới; chỉ chấp nhận email
@@ -19,16 +19,22 @@ Exposes:
   POST /api/users-delete.php   - xóa 1 tài khoản (dùng để từ chối tài khoản
                                  đang chờ, hoặc thu hồi quyền truy cập)
   POST /api/users-role.php     - (chỉ admin) đổi loại tài khoản (Engineer/OS/AS)
+
+Lưu trữ: mỗi tài khoản là 1 file JSON riêng trong collection "users" (xem
+database/filestore.py) — để chạy offline, đồng bộ nhiều máy qua Shared Drive.
 """
 
+from datetime import datetime
+
 import bcrypt
-import psycopg2
 from flask import Blueprint, jsonify, request
 
 from audit import log_action
-from database.db import get_connection
+from database import filestore
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api")
+
+COLLECTION = "users"
 
 # Generic message for any login failure so we never reveal whether
 # the username itself was the wrong part of the pair.
@@ -42,6 +48,10 @@ ALLOWED_EMAIL_SUFFIX = "@redblue.vn"
 ACCOUNT_TYPES = {"Engineer", "OS", "AS"}
 
 
+def _find_by_username(username):
+    return filestore.find_one(COLLECTION, lambda u: u.get("username") == username)
+
+
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json(silent=True) or {}
@@ -51,23 +61,7 @@ def login():
     if not username or not password:
         return jsonify({"success": False, "message": INVALID_CREDENTIALS_MESSAGE})
 
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT id, fullname, role, status, password_hash FROM users WHERE username = %s",
-                    (username,),
-                )
-                user = cursor.fetchone()
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({
-            "success": False,
-            "message": f"Lỗi kết nối cơ sở dữ liệu: {err}",
-        }), 500
-
+    user = _find_by_username(username)
     if user is None:
         return jsonify({"success": False, "message": INVALID_CREDENTIALS_MESSAGE})
 
@@ -77,7 +71,7 @@ def login():
     if not password_matches:
         return jsonify({"success": False, "message": INVALID_CREDENTIALS_MESSAGE})
 
-    if user["status"] == "pending":
+    if user.get("status") == "pending":
         return jsonify({
             "success": False,
             "message": "Tài khoản đang chờ quản trị viên duyệt (mục Cài Đặt).",
@@ -88,8 +82,8 @@ def login():
         "user": {
             "id": user["id"],
             "username": username,
-            "fullname": user["fullname"],
-            "role": user["role"],
+            "fullname": user.get("fullname") or "",
+            "role": user.get("role") or "viewer",
         },
     })
 
@@ -113,28 +107,29 @@ def register():
     if len(password) < 6:
         return jsonify({"success": False, "message": "Mật khẩu phải có ít nhất 6 ký tự"}), 400
 
-    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
     # Loại tài khoản (Engineer/OS/AS) chỉ admin mới được chỉ định, ở Cài Đặt sau khi duyệt —
     # người tự đăng ký không được tự chọn, nên luôn tạo mới ở role mặc định 'viewer'.
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO users (username, password_hash, fullname, role, email, status) VALUES (%s,%s,'','viewer',%s,'pending') RETURNING id",
-                    (username, password_hash, email),
-                )
-                new_id = cursor.fetchone()["id"]
-        finally:
-            connection.close()
-    except psycopg2.errors.UniqueViolation:
+    existing = filestore.find_one(
+        COLLECTION, lambda u: u.get("username") == username or u.get("email") == email
+    )
+    if existing:
         return jsonify({
             "success": False,
             "message": f"Tài khoản \"{username}\" hoặc email \"{email}\" đã được đăng ký trước đó",
         }), 400
-    except psycopg2.Error as err:
-        return jsonify({"success": False, "message": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    new_id = filestore.new_id()
+    filestore.save_record(COLLECTION, new_id, {
+        "id": new_id,
+        "username": username,
+        "password_hash": password_hash,
+        "fullname": "",
+        "role": "viewer",
+        "email": email,
+        "status": "pending",
+        "created_at": datetime.now().isoformat(),
+    })
 
     log_action("users", "create", target=username, detail=f"tự đăng ký, email={email}")
 
@@ -147,31 +142,29 @@ def register():
 
 @auth_bp.route("/users-list.php", methods=["GET"])
 def users_list():
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """SELECT id, username, email, fullname, role, status, created_at
-                       FROM users ORDER BY (status = 'pending') DESC, id DESC"""
-                )
-                rows = cursor.fetchall()
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    rows = filestore.list_records(COLLECTION)
+    rows.sort(key=lambda r: (r.get("status") != "pending", -r.get("id", 0)))
 
     items = [{
         "id": r["id"],
-        "username": r["username"],
-        "email": r["email"] or "",
-        "fullname": r["fullname"] or "",
-        "role": r["role"],
-        "status": r["status"],
-        "createdAt": r["created_at"].strftime("%d/%m/%Y %H:%M") if r["created_at"] else "",
+        "username": r.get("username", ""),
+        "email": r.get("email") or "",
+        "fullname": r.get("fullname") or "",
+        "role": r.get("role") or "viewer",
+        "status": r.get("status") or "active",
+        "createdAt": _format_created_at(r.get("created_at")),
     } for r in rows]
 
     return jsonify({"ok": True, "items": items})
+
+
+def _format_created_at(value):
+    if not value:
+        return ""
+    try:
+        return datetime.fromisoformat(value).strftime("%d/%m/%Y %H:%M")
+    except ValueError:
+        return value
 
 
 @auth_bp.route("/users-approve.php", methods=["POST"])
@@ -181,18 +174,10 @@ def users_approve():
     if not record_id:
         return jsonify({"ok": False, "error": "Thiếu id"}), 400
 
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "UPDATE users SET status = 'active' WHERE id = %s AND status = 'pending'",
-                    (record_id,),
-                )
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    user = filestore.get_record(COLLECTION, record_id)
+    if user and user.get("status") == "pending":
+        user["status"] = "active"
+        filestore.save_record(COLLECTION, record_id, user)
 
     log_action("users", "update", target=str(record_id), detail="duyệt tài khoản")
     return jsonify({"ok": True})
@@ -208,18 +193,10 @@ def users_role():
     if role not in ACCOUNT_TYPES:
         return jsonify({"ok": False, "error": "Loại tài khoản không hợp lệ"}), 400
 
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "UPDATE users SET role = %s WHERE id = %s AND username != 'admin'",
-                    (role, record_id),
-                )
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    user = filestore.get_record(COLLECTION, record_id)
+    if user and user.get("username") != "admin":
+        user["role"] = role
+        filestore.save_record(COLLECTION, record_id, user)
 
     log_action("users", "update", target=str(record_id), detail=f"role={role}")
     return jsonify({"ok": True})
@@ -232,21 +209,11 @@ def users_delete():
     if not record_id:
         return jsonify({"ok": False, "error": "Thiếu id"}), 400
 
-    deleted_username = None
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT username FROM users WHERE id = %s", (record_id,))
-                row = cursor.fetchone()
-                if row and row["username"] == "admin":
-                    return jsonify({"ok": False, "error": "Không thể xóa tài khoản admin mặc định"}), 400
-                deleted_username = row["username"] if row else None
-                cursor.execute("DELETE FROM users WHERE id = %s", (record_id,))
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    user = filestore.get_record(COLLECTION, record_id)
+    if user and user.get("username") == "admin":
+        return jsonify({"ok": False, "error": "Không thể xóa tài khoản admin mặc định"}), 400
 
-    log_action("users", "delete", target=deleted_username or str(record_id))
+    filestore.delete_record(COLLECTION, record_id)
+
+    log_action("users", "delete", target=(user.get("username") if user else str(record_id)))
     return jsonify({"ok": True})

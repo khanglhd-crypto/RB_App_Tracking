@@ -22,3 +22,7 @@ Thumbs.db
 # Desktop app (Electron) — chỉ commit source, không commit build/deps
 desktop/node_modules/
 desktop/dist/
+
+# Dữ liệu file-based (mặc định khi chạy dev không set DATA_ROOT/ROOT_PATH)
+backend/local_data/
+backend/local_data_test/

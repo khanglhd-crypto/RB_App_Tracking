@@ -8,50 +8,41 @@ Exposes:
   POST /api/ship-status.php  - đổi trạng thái vận chuyển
 """
 
-import json
 from datetime import datetime
 
-import psycopg2
 from flask import Blueprint, jsonify, request
 
 from audit import log_action
-from database.db import get_connection
+from database import filestore
 
 pillar_tests_bp = Blueprint("pillar_tests", __name__, url_prefix="/api")
+
+COLLECTION = "pillar_tests"
 
 
 def _row_to_item(row):
     return {
         "id": row["id"],
-        "pillar": row["pillar"],
-        "model": row["model"],
-        "source": row["source"],
-        "factory": row["factory"],
-        "ver": row["ver"],
-        "tester": row["tester"],
-        "result": row["result"],
-        "reason": row["reason"] or "",
-        "time": row["time_label"],
-        "folderName": row["folder_name"],
-        "fileNames": row["file_names"] or [],
-        "shipStatus": row["ship_status"] or "",
-        "hasPdf": bool(row["pdf_path"]),
+        "pillar": row.get("pillar", ""),
+        "model": row.get("model", ""),
+        "source": row.get("source", ""),
+        "factory": row.get("factory", ""),
+        "ver": row.get("ver", ""),
+        "tester": row.get("tester", ""),
+        "result": row.get("result", ""),
+        "reason": row.get("reason") or "",
+        "time": row.get("time_label", ""),
+        "folderName": row.get("folder_name", ""),
+        "fileNames": row.get("file_names") or [],
+        "shipStatus": row.get("ship_status") or "",
+        "hasPdf": bool(row.get("pdf_path")),
     }
 
 
 @pillar_tests_bp.route("/history.php", methods=["GET"])
 def history():
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT * FROM pillar_tests ORDER BY id DESC")
-                rows = cursor.fetchall()
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
-
+    rows = filestore.list_records(COLLECTION)
+    rows.sort(key=lambda r: r.get("id", 0), reverse=True)
     return jsonify({"ok": True, "items": [_row_to_item(r) for r in rows]})
 
 
@@ -67,35 +58,25 @@ def save_pillar():
         return jsonify({"ok": False, "error": "Thiếu mã số trụ sạc"}), 400
 
     time_label = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """INSERT INTO pillar_tests
-                       (pillar, model, source, factory, ver, tester, result, reason,
-                        time_label, folder_name, file_names, ship_status)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'') RETURNING id""",
-                    (
-                        pillar,
-                        info.get("model") or "",
-                        info.get("source") or "",
-                        info.get("factory") or "",
-                        info.get("ver") or "",
-                        info.get("tester") or "",
-                        info.get("result") or "",
-                        info.get("reason") or "",
-                        time_label,
-                        folder_label,
-                        json.dumps(file_names, ensure_ascii=False),
-                    ),
-                )
-                new_id = cursor.fetchone()["id"]
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    new_id = filestore.new_id()
+    filestore.save_record(COLLECTION, new_id, {
+        "id": new_id,
+        "pillar": pillar,
+        "model": info.get("model") or "",
+        "source": info.get("source") or "",
+        "factory": info.get("factory") or "",
+        "ver": info.get("ver") or "",
+        "tester": info.get("tester") or "",
+        "result": info.get("result") or "",
+        "reason": info.get("reason") or "",
+        "time_label": time_label,
+        "folder_name": folder_label,
+        "file_names": file_names,
+        "ship_status": "",
+        "pdf_path": None,
+        "nghiem_thu_pdf_path": None,
+        "nang_cap_pdf_path": None,
+    })
 
     log_action("test_tru", "create", target=pillar, detail=f"result={info.get('result') or ''}")
     return jsonify({"ok": True, "id": new_id})
@@ -108,15 +89,7 @@ def delete_pillar():
     if not record_id:
         return jsonify({"ok": False, "error": "Thiếu id"}), 400
 
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("DELETE FROM pillar_tests WHERE id = %s", (record_id,))
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    filestore.delete_record(COLLECTION, record_id)
 
     log_action("test_tru", "delete", target=str(record_id))
     return jsonify({"ok": True})
@@ -130,18 +103,10 @@ def set_ship_status():
     if not record_id:
         return jsonify({"ok": False, "error": "Thiếu id"}), 400
 
-    try:
-        connection = get_connection()
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "UPDATE pillar_tests SET ship_status = %s WHERE id = %s",
-                    (status, record_id),
-                )
-        finally:
-            connection.close()
-    except psycopg2.Error as err:
-        return jsonify({"ok": False, "error": f"Lỗi kết nối cơ sở dữ liệu: {err}"}), 500
+    row = filestore.get_record(COLLECTION, record_id)
+    if row:
+        row["ship_status"] = status
+        filestore.save_record(COLLECTION, record_id, row)
 
     log_action("test_tru", "update", target=str(record_id), detail=f"ship_status={status}")
     return jsonify({"ok": True})
