@@ -18,3 +18,7 @@ docs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Desktop app (Electron) — chỉ commit source, không commit build/deps
+desktop/node_modules/
+desktop/dist/
