@@ -138,7 +138,7 @@
 
     async function refreshUsers() {
         try { usersCache = (await apiGet('users-list.php')).items || []; }
-        catch (err) { alert('Không tải được danh sách tài khoản: ' + err.message); return; }
+        catch (err) { console.error(err); return; } // tự làm mới nền mỗi 8s — lỗi thoáng qua không cần làm phiền người dùng
         renderLists();
     }
 
