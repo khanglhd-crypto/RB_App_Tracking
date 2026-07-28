@@ -427,10 +427,13 @@
 <script>
     const $ = id => document.getElementById(id);
 
-    /* Mã AnyDesk/UltraView là thông tin truy cập từ xa — chỉ role 'Engineer' mới được xem. */
+    /* Mã AnyDesk/UltraView là thông tin truy cập từ xa — chỉ role 'Engineer' mới
+       được xem, admin luôn có toàn quyền nên cũng xem được. */
     function isEngineer() {
-        try { return (JSON.parse(localStorage.getItem('user') || '{}').role) === 'Engineer'; }
-        catch (_) { return false; }
+        try {
+            const role = JSON.parse(localStorage.getItem('user') || '{}').role;
+            return role === 'Engineer' || role === 'admin';
+        } catch (_) { return false; }
     }
 
     /* ─── API (Flask backend — URL cấu hình trong js/config.js) ─── */
