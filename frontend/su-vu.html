@@ -883,6 +883,7 @@
                 baseFolder: 'List Xu Ly Su Co',
                 reportName: 'Bien_Ban_Xu_Ly_Su_Co',
             });
+            await renderPdfViaElectron(html, res.path);
             await apiPostWithRetry('suvu-set-pdf.php', { id: currentSvcId, path: res.path });
             alert(`✅ Đã xuất PDF và lưu vào:\n${res.path}`);
             localStorage.removeItem(svcDraftKey(currentSvcId));
@@ -890,11 +891,19 @@
             await refreshSuVuList();
             switchTab('list');
         } catch (err) {
-            alert(`Không xuất được PDF qua máy chủ:\n${err.message}\n\nSẽ tải file HTML về máy để bạn tự in (Ctrl+P) thay thế.`);
+            alert(`Không xuất được PDF:\n${err.message}\n\nSẽ tải file HTML về máy để bạn tự in (Ctrl+P) thay thế.`);
             dlBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), `Bien_Ban_Xu_Ly_Su_Co_${fileTag}.html`);
         } finally {
             btn.disabled = false; btn.innerHTML = btnHtml;
         }
+    }
+
+    /* Render HTML thành PDF bằng chính Chromium của Electron (main.js) — không
+       còn dùng Playwright riêng ở backend nữa (app nhẹ hơn nhiều). */
+    async function renderPdfViaElectron(html, pdfPath) {
+        if (!window.electronAPI) throw new Error('Chức năng xuất PDF chỉ chạy được trong app cài đặt (không phải trình duyệt thường).');
+        const res = await window.electronAPI.renderPdf(html, pdfPath);
+        if (!res.ok) throw new Error(res.error || 'Không rõ lý do');
     }
 
     function buildSvcRptHTML(maTram, maTru, vendor, maLoi, diaDiem, ngay, moTa) {

@@ -3,16 +3,6 @@ import os
 import sys
 import time
 
-# Khi đóng gói bằng PyInstaller, trình duyệt Chromium của Playwright được kèm
-# theo vào _internal/ms-playwright thay vì %LOCALAPPDATA%\ms-playwright mặc
-# định — phải trỏ PLAYWRIGHT_BROWSERS_PATH tới đó TRƯỚC khi playwright được
-# import ở bất kỳ đâu (api/report_pdf.py), nếu không sẽ báo "Executable
-# doesn't exist".
-if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-    bundled_browsers = os.path.join(sys._MEIPASS, "ms-playwright")
-    if os.path.isdir(bundled_browsers):
-        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = bundled_browsers
-
 from flask import Flask, g, jsonify, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException

@@ -1,9 +1,14 @@
 """
-Xuất Phiếu Ảnh (Test Trụ) thành PDF, và phục vụ lại file đã xuất.
+Xuất Phiếu Ảnh (Test Trụ): lưu ảnh lẻ + tính đường dẫn PDF, và phục vụ lại
+file đã xuất.
 
-Nhận HTML đã dựng sẵn ở frontend (ảnh đã nhúng dạng base64, tự chứa toàn bộ
-nội dung), render bằng Chromium headless (Playwright) rồi lưu file PDF ngay
-trên máy chủ, vào đúng thư mục trụ đã dùng khi lưu ảnh test trụ:
+Việc render HTML -> PDF thật sự KHÔNG còn làm ở đây nữa — trước đây dùng
+Playwright (tải kèm nguyên 1 bộ Chromium riêng, ~700MB, làm app nặng gấp
+nhiều lần không cần thiết vì Electron đã có sẵn Chromium riêng để hiện giao
+diện). Giờ endpoint này chỉ lo phần dữ liệu (ảnh lẻ, đường dẫn, audit log,
+liên kết vào bản ghi trụ) — còn việc "vẽ" HTML thành file PDF thật do chính
+Electron làm (main.js, qua webContents.printToPDF trên cửa sổ ẩn), ngay sau
+khi endpoint này trả về đường dẫn cần lưu.
     <root_path>/Charge Point/<folderName>/Phieu_Test_<pillar>.pdf
 Đường dẫn được ghi vào pillar_tests.pdf_path để mở lại xem sau này qua
 GET /api/pillar-pdf.php?id=...
@@ -15,7 +20,6 @@ import os
 import re
 
 from flask import Blueprint, jsonify, request, send_file
-from playwright.sync_api import sync_playwright
 
 from audit import log_action
 from database import filestore
@@ -113,21 +117,9 @@ def export_report_pdf():
     except (OSError, ValueError, IndexError) as err:
         return jsonify({"ok": False, "error": f"Không lưu được ảnh lẻ: {err}"}), 500
 
+    # Đường dẫn PDF sẽ nằm ở đâu — file PDF thật do Electron (main.js) render và
+    # ghi ra ngay đúng đường dẫn này, ngay sau khi nhận được response này.
     pdf_path = os.path.join(target_dir, f"{_safe_name(report_name)}_{_safe_name(pillar)}.pdf")
-
-    # Chạy Chromium (Playwright) ngay trong tiến trình này — app chạy offline,
-    # không còn Flask reloader nên không cần tách tiến trình con riêng nữa.
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            try:
-                page = browser.new_page()
-                page.set_content(html, wait_until="load")
-                page.pdf(path=pdf_path, format="A4", print_background=True)
-            finally:
-                browser.close()
-    except Exception as err:
-        return jsonify({"ok": False, "error": f"Không xuất được PDF: {err}"}), 500
 
     module = MODULE_BY_BASE_FOLDER.get(base_folder)
     if module:

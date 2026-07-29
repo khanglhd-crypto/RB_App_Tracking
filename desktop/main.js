@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -152,6 +152,34 @@ async function startBackend() {
   }
 }
 
+// Render HTML thành PDF bằng chính Chromium có sẵn của Electron (cửa sổ ẩn,
+// không hiện ra) — thay cho Playwright (tốn thêm ~700MB tải riêng 1 bộ
+// Chromium khác chỉ để làm đúng việc này).
+async function renderHtmlToPdf(html, pdfPath) {
+  const tmpHtmlPath = path.join(os.tmpdir(), `rb-control-pdf-${Date.now()}-${Math.random().toString(36).slice(2)}.html`);
+  fs.writeFileSync(tmpHtmlPath, html, 'utf8');
+  const hiddenWin = new BrowserWindow({ show: false, webPreferences: { offscreen: false } });
+  try {
+    await hiddenWin.loadFile(tmpHtmlPath);
+    const pdfBuffer = await hiddenWin.webContents.printToPDF({ pageSize: 'A4', printBackground: true });
+    fs.mkdirSync(path.dirname(pdfPath), { recursive: true });
+    fs.writeFileSync(pdfPath, pdfBuffer);
+  } finally {
+    hiddenWin.close();
+    fs.unlink(tmpHtmlPath, () => {});
+  }
+}
+
+ipcMain.handle('render-pdf', async (event, html, pdfPath) => {
+  try {
+    await renderHtmlToPdf(html, pdfPath);
+    return { ok: true };
+  } catch (err) {
+    appendLog(`Lỗi render PDF (${pdfPath}): ${(err && err.message) || err}`);
+    return { ok: false, error: String((err && err.message) || err) };
+  }
+});
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -163,6 +191,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
