@@ -617,7 +617,7 @@
 
     function toggleHist(id) { $(`hist-${id}`).classList.toggle('open'); }
     async function deleteRecord(id) {
-        if (!confirm('Xóa phiếu kiểm tra này chứ bro?')) return;
+        if (!confirm('Xóa phiếu kiểm tra này?')) return;
         try { await apiPost('delete.php', { id }); } catch (err) { alert('Không xóa được: ' + err.message); return; }
         await refreshHistoryData();
     }
