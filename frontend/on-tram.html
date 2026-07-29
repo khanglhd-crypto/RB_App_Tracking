@@ -1319,7 +1319,7 @@
                 reportName: 'Bien_Ban_Nghiem_Thu',
                 id: currentTruId, linkColumn: 'nghiem_thu_pdf_path',
             });
-            await renderPdfViaElectron(html, res.path);
+            await renderPdfViaElectron(html, res.driveTarget);
             alert(`✅ Đã xuất PDF và lưu vào:\n${res.path}`);
             currentTruKey = ''; // mở khóa, cho phép chuyển sang trụ khác
             otUpdateLockState();
@@ -1333,12 +1333,14 @@
         }
     }
 
-    /* Render HTML thành PDF bằng chính Chromium của Electron (main.js) — không
-       còn dùng Playwright riêng ở backend nữa (app nhẹ hơn nhiều). */
-    async function renderPdfViaElectron(html, pdfPath) {
+    /* Render HTML thành PDF bằng chính Chromium của Electron (main.js), rồi
+       Electron tự tải PDF đó lên Drive (không còn Playwright riêng ở backend
+       nữa (app nhẹ hơn nhiều), cũng không còn ghi vào ổ đĩa ánh xạ nào cả). */
+    async function renderPdfViaElectron(html, driveTarget) {
         if (!window.electronAPI) throw new Error('Chức năng xuất PDF chỉ chạy được trong app cài đặt (không phải trình duyệt thường).');
-        const res = await window.electronAPI.renderPdf(html, pdfPath);
+        const res = await window.electronAPI.renderPdf(html, driveTarget);
         if (!res.ok) throw new Error(res.error || 'Không rõ lý do');
+        return res;
     }
 
     function buildOtRptHTML(maTram, maTru, ipcMaster, donVi, diaDiem, ngay) {

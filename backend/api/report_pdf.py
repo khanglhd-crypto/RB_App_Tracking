@@ -1,39 +1,40 @@
 """
-Xuất Phiếu Ảnh (Test Trụ): lưu ảnh lẻ + tính đường dẫn PDF, và phục vụ lại
-file đã xuất.
+Xuất Phiếu Ảnh (Test Trụ/On Trạm/Nâng Cấp Trụ Sạc): lưu ảnh lẻ + PDF thẳng
+lên Google Drive (qua drive_store.py), và phục vụ lại file đã xuất.
 
-Việc render HTML -> PDF thật sự KHÔNG còn làm ở đây nữa — trước đây dùng
-Playwright (tải kèm nguyên 1 bộ Chromium riêng, ~700MB, làm app nặng gấp
-nhiều lần không cần thiết vì Electron đã có sẵn Chromium riêng để hiện giao
-diện). Giờ endpoint này chỉ lo phần dữ liệu (ảnh lẻ, đường dẫn, audit log,
-liên kết vào bản ghi trụ) — còn việc "vẽ" HTML thành file PDF thật do chính
-Electron làm (main.js, qua webContents.printToPDF trên cửa sổ ẩn), ngay sau
-khi endpoint này trả về đường dẫn cần lưu.
-    <root_path>/Charge Point/<folderName>/Phieu_Test_<pillar>.pdf
-Đường dẫn được ghi vào pillar_tests.pdf_path để mở lại xem sau này qua
-GET /api/pillar-pdf.php?id=...
+Luồng xuất phiếu gồm 2 bước gọi từ frontend:
+  1. POST /api/export-report-pdf.php — lưu ảnh lẻ lên Drive, trả về thông
+     tin thư mục/tên file cần dùng ("driveTarget") cho bước 2.
+  2. Electron (main.js) tự vẽ HTML thành PDF (Chromium có sẵn, không cần
+     Playwright), rồi gọi POST /api/upload-pdf-to-drive.php để tải PDF vừa
+     vẽ lên đúng thư mục đó — endpoint này mới thực sự ghi liên kết PDF vào
+     bản ghi trụ (lúc bước 1 chưa có PDF nên chưa biết fileId để ghi).
+
+Trước đây (Google Drive for Desktop) lưu vào 1 ổ đĩa ánh xạ cục bộ — hay
+lỗi (Access denied/Paused/nhầm ổ đĩa) không rõ nguyên nhân. Giờ gọi thẳng
+Drive API qua mạng, lỗi gì báo rõ ngay, không còn phụ thuộc phần mềm Google
+Drive for Desktop nữa.
 """
 
 import base64
-import json
-import os
 import re
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, Response, jsonify, request
 
 from audit import log_action
 from database import filestore
+from drive_store import get_shared_sync
 
 report_pdf_bp = Blueprint("report_pdf", __name__, url_prefix="/api")
 
 PILLAR_COLLECTION = "pillar_tests"
-
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server_config.json")
 DEFAULT_BASE_FOLDER = "Charge Point"
 
-# Cột hợp lệ để ghi/đọc đường dẫn PDF trên pillar_tests — whitelist tránh SQL injection
-# qua tên cột. "pdf_path" = PDF Test Xuất Xưởng, "nghiem_thu_pdf_path" = PDF Nghiệm Thu On Trạm,
-# "nang_cap_pdf_path" = PDF Nâng Cấp Trụ Sạc.
+# Cột hợp lệ để ghi/đọc fileId PDF trên pillar_tests — whitelist tránh lỗi
+# nhập tên cột tùy ý. "pdf_path" = PDF Test Xuất Xưởng, "nghiem_thu_pdf_path"
+# = PDF Nghiệm Thu On Trạm, "nang_cap_pdf_path" = PDF Nâng Cấp Trụ Sạc.
+# (Tên cột giữ nguyên "_path" dù giờ chứa Drive fileId chứ không phải đường
+# dẫn ổ đĩa nữa — đổi tên cột sẽ phải sửa dữ liệu cũ, không cần thiết.)
 PDF_LINK_COLUMNS = {"pdf_path", "nghiem_thu_pdf_path", "nang_cap_pdf_path"}
 
 # baseFolder -> tên module ghi vào audit_log. "List Xu Ly Su Co" (Sự Vụ) không
@@ -46,35 +47,13 @@ MODULE_BY_BASE_FOLDER = {
 }
 
 
-def _get_root_path():
-    # Biến môi trường ROOT_PATH (đặt trên server thật, vd Render) được ưu tiên
-    # hơn server_config.json — vì đường dẫn Windows cục bộ trong file đó không
-    # tồn tại trên server Linux.
-    env_path = os.environ.get("ROOT_PATH")
-    if env_path:
-        return env_path
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)["root_path"]
-
-
 def _safe_name(name):
     return re.sub(r'[<>:"/\\|?*]', "_", name).strip() or "unnamed"
-
-
-def _save_data_url_image(target_dir, label, data_url):
-    """Giải mã 1 ảnh base64 (data URL) và ghi ra file .jpg trong target_dir."""
-    header, b64data = data_url.split(",", 1)
-    raw = base64.b64decode(b64data)
-    path = os.path.join(target_dir, f"{_safe_name(label)}.jpg")
-    with open(path, "wb") as f:
-        f.write(raw)
-    return path
 
 
 @report_pdf_bp.route("/export-report-pdf.php", methods=["POST"])
 def export_report_pdf():
     data = request.get_json(silent=True) or {}
-    html = data.get("html") or ""
     pillar = (data.get("pillar") or "").strip()
     folder_name = (data.get("folderName") or "").strip() or _safe_name(pillar or "unnamed")
     # folderPath: mảng các cấp thư mục con (vd ["V.E.HCM1348","HCM1348.001","HCM1348.001"])
@@ -88,57 +67,82 @@ def export_report_pdf():
     if link_column not in PDF_LINK_COLUMNS:
         link_column = "pdf_path"
 
-    if not html:
-        return jsonify({"ok": False, "error": "Thiếu nội dung phiếu để xuất PDF"}), 400
     if not pillar:
         return jsonify({"ok": False, "error": "Thiếu mã trụ sạc"}), 400
 
-    try:
-        root_path = _get_root_path()
-    except (OSError, KeyError, json.JSONDecodeError) as err:
-        return jsonify({"ok": False, "error": f"Không đọc được server_config.json: {err}"}), 500
-
-    # "Charge Point" (Test Trụ Xuất Xưởng) nằm BÊN TRONG root_path (List End Of Line Test),
-    # còn các baseFolder khác (vd "List On Tram") nằm NGANG HÀNG với root_path, không lồng vào nhau.
-    base_dir = root_path if base_folder == DEFAULT_BASE_FOLDER else os.path.dirname(root_path)
     safe_segments = [_safe_name(seg) for seg in folder_path if str(seg or "").strip()]
-    target_dir = os.path.join(base_dir, base_folder, *safe_segments) if safe_segments else os.path.join(base_dir, base_folder)
+
     try:
-        os.makedirs(target_dir, exist_ok=True)
-    except OSError as err:
-        return jsonify({"ok": False, "error": f"Không tạo được thư mục lưu: {err}"}), 500
+        sync = get_shared_sync()
+        folder_id = sync.resolve_folder_path(base_folder, safe_segments)
+    except Exception as err:
+        return jsonify({"ok": False, "error": f"Không tạo được thư mục lưu trên Drive: {err}"}), 500
 
     try:
         for img in images:
             label = (img.get("label") or "").strip()
             data_url = img.get("dataUrl")
             if label and data_url:
-                _save_data_url_image(target_dir, label, data_url)
-    except (OSError, ValueError, IndexError) as err:
-        return jsonify({"ok": False, "error": f"Không lưu được ảnh lẻ: {err}"}), 500
+                header, b64data = data_url.split(",", 1)
+                raw = base64.b64decode(b64data)
+                sync.upload_named_file(folder_id, f"{_safe_name(label)}.jpg", raw, "image/jpeg")
+    except Exception as err:
+        return jsonify({"ok": False, "error": f"Không lưu được ảnh lẻ lên Drive: {err}"}), 500
 
-    # Đường dẫn PDF sẽ nằm ở đâu — file PDF thật do Electron (main.js) render và
-    # ghi ra ngay đúng đường dẫn này, ngay sau khi nhận được response này.
-    pdf_path = os.path.join(target_dir, f"{_safe_name(report_name)}_{_safe_name(pillar)}.pdf")
+    filename = f"{_safe_name(report_name)}_{_safe_name(pillar)}.pdf"
 
     module = MODULE_BY_BASE_FOLDER.get(base_folder)
     if module:
         log_action(module, "export", target=pillar, detail=report_name)
 
+    display_path = "/".join([base_folder, *safe_segments, filename])
+    return jsonify({
+        "ok": True,
+        "path": display_path,
+        "driveTarget": {
+            "baseFolder": base_folder,
+            "folderPath": safe_segments,
+            "filename": filename,
+            "id": record_id,
+            "linkColumn": link_column,
+        },
+    })
+
+
+@report_pdf_bp.route("/upload-pdf-to-drive.php", methods=["POST"])
+def upload_pdf_to_drive():
+    """Electron (main.js) gọi endpoint này SAU KHI đã tự vẽ xong PDF (qua
+    Chromium có sẵn) — nhận nội dung PDF (base64), tải lên đúng thư mục đã
+    xác định ở export-report-pdf.php, rồi mới ghi liên kết vào bản ghi trụ
+    (lúc export-report-pdf.php chạy thì PDF chưa tồn tại nên chưa có fileId)."""
+    data = request.get_json(silent=True) or {}
+    base_folder = (data.get("baseFolder") or DEFAULT_BASE_FOLDER).strip() or DEFAULT_BASE_FOLDER
+    folder_path = data.get("folderPath") or []
+    filename = (data.get("filename") or "").strip()
+    pdf_b64 = data.get("pdfBase64")
+    record_id = data.get("id")
+    link_column = data.get("linkColumn") or "pdf_path"
+    if link_column not in PDF_LINK_COLUMNS:
+        link_column = "pdf_path"
+
+    if not filename or not pdf_b64:
+        return jsonify({"ok": False, "error": "Thiếu tên file hoặc nội dung PDF"}), 400
+
+    try:
+        raw = base64.b64decode(pdf_b64)
+        sync = get_shared_sync()
+        folder_id = sync.resolve_folder_path(base_folder, folder_path)
+        file_id = sync.upload_named_file(folder_id, filename, raw, "application/pdf")
+    except Exception as err:
+        return jsonify({"ok": False, "error": f"Không tải được PDF lên Drive: {err}"}), 500
+
     if record_id:
-        # link_column da duoc kiem tra nam trong PDF_LINK_COLUMNS (whitelist) o tren
         row = filestore.get_record(PILLAR_COLLECTION, record_id)
         if row:
-            row[link_column] = pdf_path
+            row[link_column] = file_id
             filestore.save_record(PILLAR_COLLECTION, record_id, row)
-        else:
-            return jsonify({
-                "ok": True,
-                "path": pdf_path,
-                "warning": "PDF đã lưu nhưng không tìm thấy bản ghi trụ để ghi liên kết xem lại",
-            })
 
-    return jsonify({"ok": True, "path": pdf_path})
+    return jsonify({"ok": True, "fileId": file_id})
 
 
 @report_pdf_bp.route("/pillar-pdf.php", methods=["GET"])
@@ -157,11 +161,14 @@ def view_pillar_pdf():
 
     # link_column chi co 2 gia tri co dinh o tren, khong lay truc tiep tu request
     row = filestore.get_record(PILLAR_COLLECTION, record_id)
-    pdf_path = row.get(link_column) if row else None
+    file_id = row.get(link_column) if row else None
 
-    if not pdf_path:
+    if not file_id:
         return jsonify({"ok": False, "error": "Trụ này chưa xuất Phiếu Ảnh"}), 404
-    if not os.path.isfile(pdf_path):
-        return jsonify({"ok": False, "error": "Không tìm thấy file PDF trên máy chủ (có thể đã bị xóa/di chuyển)"}), 404
 
-    return send_file(pdf_path, mimetype="application/pdf")
+    try:
+        content = get_shared_sync().download_file_bytes(file_id)
+    except Exception as err:
+        return jsonify({"ok": False, "error": f"Không tải được PDF từ Drive: {err}"}), 404
+
+    return Response(content, mimetype="application/pdf")

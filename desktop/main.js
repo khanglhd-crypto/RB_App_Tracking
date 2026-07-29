@@ -8,10 +8,11 @@ const { spawn } = require('child_process');
 const PORT = 5678;
 const APP_URL = `http://127.0.0.1:${PORT}/login.html`;
 
-// Ghi log ra file LOCAL trước (nhanh, không phụ thuộc Shared Drive), rồi định
-// kỳ copy file đó lên Shared Drive (_logs/<tên máy>-electron.log) để người
-// quản trị đọc lại được từ máy khác khi cần chẩn đoán lỗi — không cần đồng
-// nghiệp hiểu hay làm gì cả.
+// Ghi log ra file LOCAL trước (nhanh), rồi định kỳ gửi nội dung đó cho
+// chính backend (đã có sẵn kết nối Google Drive API) để đẩy lên Drive —
+// không còn copy file trực tiếp vào ổ đĩa ánh xạ Google Drive for Desktop
+// nữa (đúng kiểu thao tác từng gây lỗi Access denied/Paused không rõ
+// nguyên nhân trên máy đồng nghiệp).
 const LOCAL_LOG_PATH = path.join(app.getPath('userData'), 'app.log');
 let logSyncTimer = null;
 
@@ -28,33 +29,38 @@ function appendLog(line) {
   console.log(entry.trim());
 }
 
-function startLogSync(dataRoot) {
-  const remoteDir = path.join(dataRoot, '_logs');
-  const remotePath = path.join(remoteDir, `${os.hostname()}-electron.log`);
+// POST JSON đơn giản tới chính backend cục bộ (127.0.0.1) — dùng cho cả
+// đồng bộ log và tải PDF vừa vẽ lên Drive.
+function httpPostJson(url, bodyObj) {
+  return new Promise((resolve, reject) => {
+    const body = Buffer.from(JSON.stringify(bodyObj), 'utf8');
+    const req = http.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': body.length },
+    }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); } catch (err) { reject(err); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+function startLogSync() {
+  const filename = `${os.hostname()}-electron.log`;
   const syncOnce = () => {
-    try {
-      fs.mkdirSync(remoteDir, { recursive: true });
-      fs.copyFileSync(LOCAL_LOG_PATH, remotePath);
-    } catch (_) { /* đồng bộ log là phụ — lỗi ở đây bỏ qua */ }
+    let content;
+    try { content = fs.readFileSync(LOCAL_LOG_PATH, 'utf8'); } catch (_) { return; }
+    httpPostJson(`http://127.0.0.1:${PORT}/api/upload-electron-log.php`, { filename, content })
+      .catch(() => {}); // đồng bộ log là phụ — lỗi ở đây bỏ qua
   };
   syncOnce();
   logSyncTimer = setInterval(syncOnce, 30000);
 }
-
-// Google Drive for Desktop gắn "Shared drives" vào một ổ đĩa riêng trên MỖI
-// MÁY — chữ cái ổ đĩa KHÔNG cố định giống nhau giữa các máy (tùy máy đó đã
-// dùng hết ổ nào). Vì vậy KHÔNG hardcode chữ ổ đĩa — tự dò qua tất cả các ổ
-// đang có trên máy, tìm ổ nào chứa đúng thư mục Shared Drive tên
-// "Charge Station Documents" thì dùng ổ đó.
-//
-// FILES_ROOT: PHẢI trỏ đúng vào thư mục "List End Of Line Test" đã dùng từ
-// trước tới giờ (chứa sẵn thư mục con "Charge Point") — để PDF/ảnh xuất ra
-// tiếp tục lưu đúng chỗ cũ. Riêng dữ liệu (tài khoản, phiếu test...) giờ
-// KHÔNG còn qua ổ đĩa ánh xạ này nữa — backend tự gọi thẳng Google Drive API
-// (xem backend/drive_store.py), không cần "App Data" cục bộ nữa.
-const SHARED_DRIVE_NAME = 'Charge Station Documents';
-
-let FILES_ROOT = null;
 
 let backendProcess = null;
 let mainWindow = null;
@@ -66,42 +72,11 @@ function getBackendExePath() {
   return path.join(base, 'rb-control-backend.exe');
 }
 
-// Dò qua các ổ đĩa C: tới Z: (bỏ qua A/B — ổ đĩa mềm cũ), tìm ổ nào có
-// "<ổ>:\Shared drives\Charge Station Documents" thì trả về đường dẫn đó.
-function findSharedDriveRoot() {
-  for (let code = 'C'.charCodeAt(0); code <= 'Z'.charCodeAt(0); code++) {
-    const letter = String.fromCharCode(code);
-    const candidate = `${letter}:\\Shared drives\\${SHARED_DRIVE_NAME}`;
-    if (fs.existsSync(candidate)) {
-      appendLog(`Tìm thấy Shared Drive ở ổ ${letter}: -> ${candidate}`);
-      return candidate;
-    }
-  }
-  appendLog(`Không tìm thấy Shared Drive "${SHARED_DRIVE_NAME}" ở ổ đĩa nào (đã quét C: đến Z:)`);
-  return null;
-}
-
-function checkFilesRoot() {
-  const sharedRoot = findSharedDriveRoot();
-  if (!sharedRoot) {
-    throw new Error(
-      `Không tìm thấy Shared Drive "${SHARED_DRIVE_NAME}" ở ổ đĩa nào trên máy này.\n\n` +
-      `Kiểm tra lại: Google Drive for Desktop đã mở và đăng nhập đúng tài khoản có quyền ` +
-      `vào Shared Drive "${SHARED_DRIVE_NAME}" chưa, và đã đồng bộ xong chưa.\n\n` +
-      `(Chỉ ảnh hưởng phần lưu ảnh/PDF — tài khoản và dữ liệu khác vẫn hoạt động qua mạng.)`
-    );
-  }
-  FILES_ROOT = path.join(sharedRoot, 'List End Of Line Test');
-  fs.mkdirSync(FILES_ROOT, { recursive: true });
-  appendLog(`FILES_ROOT=${FILES_ROOT}`);
-  startLogSync(path.join(sharedRoot, 'App Data'));
-}
-
 // Đợi backend không chỉ "còn sống" (health 200) mà phải THẬT SỰ sẵn sàng
 // (ready:true — đã tải xong tài khoản từ Drive) rồi mới mở cửa sổ. Nếu chỉ
 // đợi health 200 thì cửa sổ có thể mở ra trước khi dữ liệu tải xong, người
 // dùng đăng nhập ngay sẽ bị báo nhầm "sai tài khoản hoặc mật khẩu".
-function waitForBackend(retries = 60, delayMs = 500) {
+function waitForBackend(retries = 120, delayMs = 500) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     function check() {
@@ -131,30 +106,18 @@ function waitForBackend(retries = 60, delayMs = 500) {
 async function startBackend() {
   appendLog(`=== App khởi động (version ${app.getVersion()}) ===`);
 
-  // Tài khoản/dữ liệu giờ qua thẳng Google Drive API (không cần ổ đĩa ánh xạ
-  // nào), CHỈ ảnh/PDF mới cần Shared Drive gắn đúng ổ đĩa — nên nếu không
-  // tìm thấy, chỉ cảnh báo rồi vẫn mở app bình thường (đăng nhập, xem dữ
-  // liệu... vẫn dùng được), không chặn hẳn cả app như trước nữa.
-  try {
-    checkFilesRoot();
-  } catch (err) {
-    appendLog(`Cảnh báo: ${err.message}`);
-    dialog.showErrorBox('Không tìm thấy thư mục lưu ảnh/PDF', err.message);
-  }
-
   const exePath = getBackendExePath();
   if (!fs.existsSync(exePath)) {
     appendLog(`Không tìm thấy file backend: ${exePath}`);
     throw new Error(`Không tìm thấy file backend:\n${exePath}`);
   }
 
+  // Tài khoản, dữ liệu, ảnh và PDF giờ đều qua thẳng Google Drive API (xem
+  // backend/drive_store.py) — không còn cần tìm ổ đĩa Google Drive for
+  // Desktop nào cả, chỉ cần máy có mạng internet.
   appendLog(`Khởi động backend: ${exePath}`);
   backendProcess = spawn(exePath, [], {
-    env: {
-      ...process.env,
-      ROOT_PATH: FILES_ROOT || '',
-      PORT: String(PORT),
-    },
+    env: { ...process.env, PORT: String(PORT) },
     windowsHide: true,
   });
 
@@ -169,32 +132,41 @@ async function startBackend() {
     appendLog(`Backend không sẵn sàng: ${err.message}`);
     throw err;
   }
+
+  startLogSync();
 }
 
 // Render HTML thành PDF bằng chính Chromium có sẵn của Electron (cửa sổ ẩn,
 // không hiện ra) — thay cho Playwright (tốn thêm ~700MB tải riêng 1 bộ
-// Chromium khác chỉ để làm đúng việc này).
-async function renderHtmlToPdf(html, pdfPath) {
+// Chromium khác chỉ để làm đúng việc này). Sau khi vẽ xong, gửi thẳng nội
+// dung PDF cho backend để tải lên Drive — không ghi ra ổ đĩa ánh xạ nào cả.
+async function renderHtmlToPdfBuffer(html) {
   const tmpHtmlPath = path.join(os.tmpdir(), `rb-control-pdf-${Date.now()}-${Math.random().toString(36).slice(2)}.html`);
   fs.writeFileSync(tmpHtmlPath, html, 'utf8');
   const hiddenWin = new BrowserWindow({ show: false, webPreferences: { offscreen: false } });
   try {
     await hiddenWin.loadFile(tmpHtmlPath);
-    const pdfBuffer = await hiddenWin.webContents.printToPDF({ pageSize: 'A4', printBackground: true });
-    fs.mkdirSync(path.dirname(pdfPath), { recursive: true });
-    fs.writeFileSync(pdfPath, pdfBuffer);
+    return await hiddenWin.webContents.printToPDF({ pageSize: 'A4', printBackground: true });
   } finally {
     hiddenWin.close();
     fs.unlink(tmpHtmlPath, () => {});
   }
 }
 
-ipcMain.handle('render-pdf', async (event, html, pdfPath) => {
+ipcMain.handle('render-pdf', async (event, html, driveTarget) => {
   try {
-    await renderHtmlToPdf(html, pdfPath);
-    return { ok: true };
+    const pdfBuffer = await renderHtmlToPdfBuffer(html);
+    const res = await httpPostJson(`http://127.0.0.1:${PORT}/api/upload-pdf-to-drive.php`, {
+      baseFolder: driveTarget.baseFolder,
+      folderPath: driveTarget.folderPath,
+      filename: driveTarget.filename,
+      id: driveTarget.id,
+      linkColumn: driveTarget.linkColumn,
+      pdfBase64: pdfBuffer.toString('base64'),
+    });
+    return res;
   } catch (err) {
-    appendLog(`Lỗi render PDF (${pdfPath}): ${(err && err.message) || err}`);
+    appendLog(`Lỗi render/tải PDF lên Drive: ${(err && err.message) || err}`);
     return { ok: false, error: String((err && err.message) || err) };
   }
 });

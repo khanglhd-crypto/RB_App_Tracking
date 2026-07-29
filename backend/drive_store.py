@@ -84,6 +84,7 @@ class DriveSync:
         self.in_flight_pushes = set()  # {(collection, record_id)} đang đẩy dở — chặn đẩy trùng
         self.miss_streak = {}          # collection -> {record_id: số lần pull liên tiếp không thấy}
         self.ready = threading.Event()  # bật khi "users" đã sẵn sàng (đủ để đăng nhập)
+        self._folder_path_cache = {}   # (parent_id, name) -> Drive folder id (ảnh/PDF, khác App Data)
 
         threading.Thread(target=self._startup, daemon=True).start()
 
@@ -173,12 +174,16 @@ class DriveSync:
     def _startup(self):
         try:
             self._init_folders()
-            # "users" cần có ngay để đăng nhập được — ưu tiên tải trước.
+            # "users" cần có ngay để đăng nhập được — ưu tiên tải trước, nhưng
+            # "ready" chỉ bật sau khi TẤT CẢ collection đã tải xong — tránh
+            # các màn hình khác (IPC, Trạm, Sự vụ...) hiện tạm "trống" vài
+            # giây đầu do dữ liệu thật chưa kịp tải xong (dễ tưởng nhầm là
+            # mất dữ liệu). Toàn bộ chỉ mất thêm vài giây lúc khởi động.
             self._pull_collection("users")
-            self.ready.set()
             for col in COLLECTIONS:
                 if col != "users":
                     self._pull_collection(col)
+            self.ready.set()
         except Exception:
             logger.exception("Loi khi khoi tao DriveSync (_startup)")
             self.ready.set()  # đừng để app treo mãi nếu lần đầu lỗi — cứ chạy tiếp với cache rỗng
@@ -201,6 +206,60 @@ class DriveSync:
         d = os.path.join(self.cache_root, collection)
         os.makedirs(d, exist_ok=True)
         return d
+
+    # ------------------------------------------------------------------ #
+    # Ảnh/PDF (Test Trụ, On Trạm, Test IPC...) — thư mục KHÁC "App Data",
+    # nằm ở gốc Shared Drive (vd "List End Of Line Test/Charge Point/...",
+    # "IPC/..."), tìm/tạo theo tên từng cấp thư mục con, có cache lại để
+    # không phải hỏi Drive lại mỗi lần dùng cùng 1 đường dẫn.
+    # ------------------------------------------------------------------ #
+    def _find_or_create_folder(self, name, parent_id):
+        cache_key = (parent_id, name)
+        with self.lock:
+            cached = self._folder_path_cache.get(cache_key)
+        if cached:
+            return cached
+        res = self._list_files(
+            q=f"name='{name}' and '{parent_id}' in parents and trashed=false",
+            fields="files(id,name)",
+        )
+        files = res.get("files", [])
+        folder_id = files[0]["id"] if files else self._create_folder(name, parent_id)["id"]
+        with self.lock:
+            self._folder_path_cache[cache_key] = folder_id
+        return folder_id
+
+    def resolve_folder_path(self, base_folder, segments):
+        """Trả về Drive folder id sau khi tìm/tạo đủ các cấp thư mục con.
+        "Charge Point" (Test Trụ Xuất Xưởng) nằm BÊN TRONG "List End Of Line
+        Test", còn các baseFolder khác (vd "List On Tram", "IPC") nằm ngay ở
+        gốc Shared Drive — giữ đúng cấu trúc thư mục cũ đã dùng từ trước."""
+        if base_folder == "Charge Point":
+            eol_id = self._find_or_create_folder("List End Of Line Test", SHARED_DRIVE_ID)
+            current = self._find_or_create_folder("Charge Point", eol_id)
+        else:
+            current = self._find_or_create_folder(base_folder, SHARED_DRIVE_ID)
+        for seg in segments:
+            if seg:
+                current = self._find_or_create_folder(seg, current)
+        return current
+
+    def upload_named_file(self, folder_id, filename, content, mimetype):
+        """Tạo mới (hoặc ghi đè nếu đã có đúng tên trong đúng thư mục) 1 file
+        — dùng cho ảnh lẻ/PDF, không cần theo dõi modifiedTime như dữ liệu
+        JSON (mỗi lần xuất phiếu là 1 file mới hoặc ghi đè bản cũ, không cần
+        đồng bộ 2 chiều phức tạp)."""
+        res = self._list_files(
+            q=f"name='{filename}' and '{folder_id}' in parents and trashed=false",
+            fields="files(id)",
+        )
+        found = res.get("files", [])
+        if found:
+            return self._update_file_content(found[0]["id"], content, mimetype, "id")["id"]
+        return self._create_file_with_content(filename, folder_id, content, mimetype, "id")["id"]
+
+    def download_file_bytes(self, file_id):
+        return self._download_file(file_id)
 
     # ------------------------------------------------------------------ #
     # Vòng lặp nền: tải thay đổi mới + đẩy các thay đổi đang chờ
@@ -401,6 +460,16 @@ class DriveSync:
     # cứ tìm theo tên rồi tạo/cập nhật là đủ.
     # ------------------------------------------------------------------ #
     def upload_log_file(self, filename, local_path):
+        with open(local_path, "rb") as f:
+            content = f.read()
+        self.upload_log_content(filename, content)
+
+    def upload_log_content(self, filename, content):
+        """content: bytes HOẶC str — dùng cho cả log backend (đọc từ file cục
+        bộ) lẫn log Electron (nhận thẳng nội dung qua API, xem server.py)."""
+        if isinstance(content, str):
+            content = content.encode("utf-8")
+
         with self.lock:
             logs_folder_id = self.folder_ids.get("_logs")
         if not logs_folder_id:
@@ -416,9 +485,6 @@ class DriveSync:
                 logs_folder_id = folder["id"]
             with self.lock:
                 self.folder_ids["_logs"] = logs_folder_id
-
-        with open(local_path, "rb") as f:
-            content = f.read()
 
         with self.lock:
             known_id = self.file_meta.setdefault("_logs", {}).get(filename, {}).get("id")

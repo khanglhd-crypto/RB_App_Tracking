@@ -843,7 +843,7 @@
 
         try {
             const res = await apiPostWithRetry('export-report-pdf.php', { pillar, folderName, html, images, id: currentReportRecordId });
-            await renderPdfViaElectron(html, res.path);
+            await renderPdfViaElectron(html, res.driveTarget);
             alert(`✅ Đã xuất PDF và lưu vào:\n${res.path}`);
             if (currentReportRecordId) await refreshHistoryData();
         } catch (err) {
@@ -854,12 +854,14 @@
         }
     }
 
-    /* Render HTML thành PDF bằng chính Chromium của Electron (main.js) — không
-       còn dùng Playwright riêng ở backend nữa (app nhẹ hơn nhiều). */
-    async function renderPdfViaElectron(html, pdfPath) {
+    /* Render HTML thành PDF bằng chính Chromium của Electron (main.js), rồi
+       Electron tự tải PDF đó lên Drive (không còn Playwright riêng ở backend
+       nữa (app nhẹ hơn nhiều), cũng không còn ghi vào ổ đĩa ánh xạ nào cả). */
+    async function renderPdfViaElectron(html, driveTarget) {
         if (!window.electronAPI) throw new Error('Chức năng xuất PDF chỉ chạy được trong app cài đặt (không phải trình duyệt thường).');
-        const res = await window.electronAPI.renderPdf(html, pdfPath);
+        const res = await window.electronAPI.renderPdf(html, driveTarget);
         if (!res.ok) throw new Error(res.error || 'Không rõ lý do');
+        return res;
     }
 
     function dlBlob(blob, name) {

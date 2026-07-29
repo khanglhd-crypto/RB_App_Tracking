@@ -883,8 +883,8 @@
                 baseFolder: 'List Xu Ly Su Co',
                 reportName: 'Bien_Ban_Xu_Ly_Su_Co',
             });
-            await renderPdfViaElectron(html, res.path);
-            await apiPostWithRetry('suvu-set-pdf.php', { id: currentSvcId, path: res.path });
+            const pdfRes = await renderPdfViaElectron(html, res.driveTarget);
+            await apiPostWithRetry('suvu-set-pdf.php', { id: currentSvcId, path: pdfRes.fileId });
             alert(`✅ Đã xuất PDF và lưu vào:\n${res.path}`);
             localStorage.removeItem(svcDraftKey(currentSvcId));
             currentSvcId = null;
@@ -898,12 +898,14 @@
         }
     }
 
-    /* Render HTML thành PDF bằng chính Chromium của Electron (main.js) — không
-       còn dùng Playwright riêng ở backend nữa (app nhẹ hơn nhiều). */
-    async function renderPdfViaElectron(html, pdfPath) {
+    /* Render HTML thành PDF bằng chính Chromium của Electron (main.js), rồi
+       Electron tự tải PDF đó lên Drive (không còn Playwright riêng ở backend
+       nữa (app nhẹ hơn nhiều), cũng không còn ghi vào ổ đĩa ánh xạ nào cả). */
+    async function renderPdfViaElectron(html, driveTarget) {
         if (!window.electronAPI) throw new Error('Chức năng xuất PDF chỉ chạy được trong app cài đặt (không phải trình duyệt thường).');
-        const res = await window.electronAPI.renderPdf(html, pdfPath);
+        const res = await window.electronAPI.renderPdf(html, driveTarget);
         if (!res.ok) throw new Error(res.error || 'Không rõ lý do');
+        return res;
     }
 
     function buildSvcRptHTML(maTram, maTru, vendor, maLoi, diaDiem, ngay, moTa) {

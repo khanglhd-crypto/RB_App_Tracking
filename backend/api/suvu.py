@@ -13,13 +13,13 @@ Exposes:
                                  trạm chứa trụ đó (Trạm Sạc), lần sửa chữa gần nhất
 """
 
-import os
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, Response, jsonify, request
 
 from audit import log_action
 from database import filestore
+from drive_store import get_shared_sync
 
 suvu_bp = Blueprint("suvu", __name__, url_prefix="/api")
 
@@ -174,14 +174,17 @@ def view_suvu_pdf():
         return jsonify({"ok": False, "error": "Thiếu id"}), 400
 
     row = filestore.get_record(COLLECTION, record_id)
-    pdf_path = row.get("xu_ly_pdf_path") if row else None
+    file_id = row.get("xu_ly_pdf_path") if row else None
 
-    if not pdf_path:
+    if not file_id:
         return jsonify({"ok": False, "error": "Sự vụ này chưa xuất Phiếu Xử Lý Sự Cố"}), 404
-    if not os.path.isfile(pdf_path):
-        return jsonify({"ok": False, "error": "Không tìm thấy file PDF trên máy chủ (có thể đã bị xóa/di chuyển)"}), 404
 
-    return send_file(pdf_path, mimetype="application/pdf")
+    try:
+        content = get_shared_sync().download_file_bytes(file_id)
+    except Exception as err:
+        return jsonify({"ok": False, "error": f"Không tải được PDF từ Drive: {err}"}), 404
+
+    return Response(content, mimetype="application/pdf")
 
 
 @suvu_bp.route("/suvu-delete.php", methods=["POST"])

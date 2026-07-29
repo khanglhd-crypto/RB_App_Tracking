@@ -8,26 +8,26 @@ Exposes:
   POST /api/ipc-delete.php  - xóa 1 IPC
   GET  /api/ipc-photo.php   - xem lại 1 ảnh đã lưu (?id=...&field=sn|anydesk|ultraview)
 
-Ảnh SN/AnyDesk/UltraView được lưu trực tiếp trên máy/Shared Drive, vào:
-    <root_path>/IPC/<mã SN>/SN.jpg | AnyDesk.jpg | UltraView.jpg
-Chỉ đường dẫn file được ghi vào bản ghi JSON (không lưu base64 trong đó).
+Ảnh SN/AnyDesk/UltraView được tải thẳng lên Google Drive (thư mục gốc
+"IPC/<mã SN>/SN.jpg | AnyDesk.jpg | UltraView.jpg") qua drive_store.py —
+không còn ghi trực tiếp vào ổ đĩa Google Drive for Desktop ánh xạ (hay lỗi
+Access denied/Paused không rõ nguyên nhân) nữa. Chỉ Drive fileId được ghi
+vào bản ghi JSON (không lưu base64 trong đó).
 """
 
 import base64
-import json
-import os
 import re
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, Response, jsonify, request
 
 from audit import log_action
 from database import filestore
+from drive_store import get_shared_sync
 
 ipc_bp = Blueprint("ipc", __name__, url_prefix="/api")
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server_config.json")
-IPC_FOLDER_NAME = "IPC"
+IPC_BASE_FOLDER = "IPC"
 COLLECTION = "ipc_list"
 
 PHOTO_FIELD_KEYS = {
@@ -37,28 +37,8 @@ PHOTO_FIELD_KEYS = {
 }
 
 
-def _get_root_path():
-    # Biến môi trường ROOT_PATH (đặt vào đúng thư mục trong Shared Drive khi
-    # chạy offline) được ưu tiên hơn server_config.json.
-    env_path = os.environ.get("ROOT_PATH")
-    if env_path:
-        return env_path
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)["root_path"]
-
-
 def _safe_name(name):
     return re.sub(r'[<>:"/\\|?*]', "_", name).strip() or "unnamed"
-
-
-def _save_photo(target_dir, label, data_url):
-    """Giải mã 1 ảnh base64 (data URL) và ghi ra file .jpg trong target_dir. Trả về đường dẫn file."""
-    header, b64data = data_url.split(",", 1)
-    raw = base64.b64decode(b64data)
-    path = os.path.join(target_dir, f"{label}.jpg")
-    with open(path, "wb") as f:
-        f.write(raw)
-    return path
 
 
 def _row_to_item(row):
@@ -97,15 +77,18 @@ def ipc_save():
 
     photo_paths = {"sn": None, "anydesk": None, "ultraview": None}
     try:
-        root_path = _get_root_path()
-        target_dir = os.path.join(root_path, IPC_FOLDER_NAME, _safe_name(sn))
+        sync = get_shared_sync()
+        folder_id = sync.resolve_folder_path(IPC_BASE_FOLDER, [_safe_name(sn)])
         for field, (_, label) in PHOTO_FIELD_KEYS.items():
             data_url = data.get(f"{field}Photo")
             if data_url:
-                os.makedirs(target_dir, exist_ok=True)
-                photo_paths[field] = _save_photo(target_dir, label, data_url)
-    except (OSError, KeyError, json.JSONDecodeError, ValueError) as err:
-        return jsonify({"ok": False, "error": f"Không lưu được ảnh IPC: {err}"}), 500
+                header, b64data = data_url.split(",", 1)
+                raw = base64.b64decode(b64data)
+                photo_paths[field] = sync.upload_named_file(folder_id, f"{label}.jpg", raw, "image/jpeg")
+    except (ValueError, IndexError) as err:
+        return jsonify({"ok": False, "error": f"Ảnh không hợp lệ: {err}"}), 400
+    except Exception as err:
+        return jsonify({"ok": False, "error": f"Không lưu được ảnh IPC lên Drive: {err}"}), 500
 
     new_id = filestore.new_id()
     filestore.save_record(COLLECTION, new_id, {
@@ -134,14 +117,17 @@ def ipc_photo():
 
     key, _ = PHOTO_FIELD_KEYS[field]
     row = filestore.get_record(COLLECTION, record_id)
-    photo_path = row.get(key) if row else None
+    file_id = row.get(key) if row else None
 
-    if not photo_path:
+    if not file_id:
         return jsonify({"ok": False, "error": "IPC này chưa có ảnh"}), 404
-    if not os.path.isfile(photo_path):
-        return jsonify({"ok": False, "error": "Không tìm thấy file ảnh trên máy chủ"}), 404
 
-    return send_file(photo_path, mimetype="image/jpeg")
+    try:
+        content = get_shared_sync().download_file_bytes(file_id)
+    except Exception as err:
+        return jsonify({"ok": False, "error": f"Không tải được ảnh từ Drive: {err}"}), 404
+
+    return Response(content, mimetype="image/jpeg")
 
 
 @ipc_bp.route("/ipc-status.php", methods=["POST"])

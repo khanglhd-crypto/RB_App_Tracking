@@ -15,13 +15,11 @@ from api.suvu import suvu_bp
 from api.report_pdf import report_pdf_bp
 from api.audit import audit_bp
 from database import filestore
+from drive_store import get_shared_sync
 from logsetup import setup_logging
 
 logger = setup_logging()
-logger.info(
-    "=== Backend started (PID=%s) ROOT_PATH=%s ===",
-    os.getpid(), os.environ.get("ROOT_PATH", ""),
-)
+logger.info("=== Backend started (PID=%s) ===", os.getpid())
 
 
 def _find_frontend_dir():
@@ -87,6 +85,24 @@ def health():
     # đợi cờ này trước khi mở cửa sổ, để tránh người dùng đăng nhập ngay lúc
     # dữ liệu chưa kịp tải xong (sẽ báo nhầm "sai tài khoản hoặc mật khẩu").
     return jsonify({"status": "ok", "ready": filestore.is_ready()})
+
+
+@app.route("/api/upload-electron-log.php", methods=["POST"])
+def upload_electron_log():
+    # main.js (Electron) gọi endpoint này mỗi 30s để đẩy log của chính nó
+    # (khởi động app, có tìm thấy Shared Drive không...) lên Drive — dùng lại
+    # đúng cơ chế log backend đã có (drive_store.py), không tự nói chuyện
+    # với Drive từ phía Node.js nữa.
+    data = request.get_json(silent=True) or {}
+    filename = (data.get("filename") or "").strip()
+    content = data.get("content") or ""
+    if not filename:
+        return jsonify({"ok": False, "error": "Thiếu tên file"}), 400
+    try:
+        get_shared_sync().upload_log_content(filename, content)
+    except Exception as err:
+        return jsonify({"ok": False, "error": str(err)}), 500
+    return jsonify({"ok": True})
 
 
 @app.route("/")
