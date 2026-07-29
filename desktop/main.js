@@ -8,6 +8,15 @@ const { spawn } = require('child_process');
 const PORT = 5678;
 const APP_URL = `http://127.0.0.1:${PORT}/login.html`;
 
+// Chặn mở nhiều app cùng lúc — nếu bấm mở app lần nữa lúc lần trước đang
+// khởi động (backend chưa kịp sẵn sàng, hay xảy ra khi thấy app "đứng" rồi
+// bấm mở lại), 2 tiến trình backend sẽ tranh nhau đúng 1 cổng (5678) và
+// đều lỗi. Thay vào đó chỉ focus lại cửa sổ đang có.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
 // Ghi log ra file LOCAL trước (nhanh), rồi định kỳ gửi nội dung đó cho
 // chính backend (đã có sẵn kết nối Google Drive API) để đẩy lên Drive —
 // không còn copy file trực tiếp vào ổ đĩa ánh xạ Google Drive for Desktop
@@ -195,6 +204,15 @@ function createWindow() {
     return { action: 'deny' };
   });
 }
+
+// Nếu người dùng cố mở thêm 1 lần nữa lúc app đã đang chạy (vd tưởng app bị
+// đứng nên bấm mở lại) — chỉ đưa cửa sổ đang có ra trước, không mở thêm gì.
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
 
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);

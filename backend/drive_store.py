@@ -174,16 +174,17 @@ class DriveSync:
     def _startup(self):
         try:
             self._init_folders()
-            # "users" cần có ngay để đăng nhập được — ưu tiên tải trước, nhưng
-            # "ready" chỉ bật sau khi TẤT CẢ collection đã tải xong — tránh
-            # các màn hình khác (IPC, Trạm, Sự vụ...) hiện tạm "trống" vài
-            # giây đầu do dữ liệu thật chưa kịp tải xong (dễ tưởng nhầm là
-            # mất dữ liệu). Toàn bộ chỉ mất thêm vài giây lúc khởi động.
+            # "users" cần có ngay để đăng nhập được — ưu tiên tải trước và
+            # bật "ready" NGAY sau đó (KHÔNG đợi hết mọi collection), để thời
+            # gian mở app không phình to dần theo tổng dữ liệu lịch sử (audit
+            # log, phiếu test... càng dùng lâu càng nhiều) — tránh timeout mở
+            # app. Các màn hình khác (IPC, Trạm, Sự vụ...) có thể hiện trống
+            # vài giây đầu trong lúc tải nốt ở nền, tự hết ngay sau đó.
             self._pull_collection("users")
+            self.ready.set()
             for col in COLLECTIONS:
                 if col != "users":
                     self._pull_collection(col)
-            self.ready.set()
         except Exception:
             logger.exception("Loi khi khoi tao DriveSync (_startup)")
             self.ready.set()  # đừng để app treo mãi nếu lần đầu lỗi — cứ chạy tiếp với cache rỗng
