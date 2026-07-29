@@ -47,14 +47,13 @@ function startLogSync(dataRoot) {
 // đang có trên máy, tìm ổ nào chứa đúng thư mục Shared Drive tên
 // "Charge Station Documents" thì dùng ổ đó.
 //
-// DATA_ROOT: nơi lưu các bản ghi JSON (users, pillar_tests, tram_tong...) —
-// thư mục riêng, không ảnh hưởng gì tới cấu trúc thư mục ảnh/PDF cũ.
 // FILES_ROOT: PHẢI trỏ đúng vào thư mục "List End Of Line Test" đã dùng từ
 // trước tới giờ (chứa sẵn thư mục con "Charge Point") — để PDF/ảnh xuất ra
-// tiếp tục lưu đúng chỗ cũ, không tạo thư mục "Charge Point" mới ở nơi khác.
+// tiếp tục lưu đúng chỗ cũ. Riêng dữ liệu (tài khoản, phiếu test...) giờ
+// KHÔNG còn qua ổ đĩa ánh xạ này nữa — backend tự gọi thẳng Google Drive API
+// (xem backend/drive_store.py), không cần "App Data" cục bộ nữa.
 const SHARED_DRIVE_NAME = 'Charge Station Documents';
 
-let DATA_ROOT = null;
 let FILES_ROOT = null;
 
 let backendProcess = null;
@@ -82,31 +81,42 @@ function findSharedDriveRoot() {
   return null;
 }
 
-function checkDataRoot() {
+function checkFilesRoot() {
   const sharedRoot = findSharedDriveRoot();
   if (!sharedRoot) {
     throw new Error(
       `Không tìm thấy Shared Drive "${SHARED_DRIVE_NAME}" ở ổ đĩa nào trên máy này.\n\n` +
       `Kiểm tra lại: Google Drive for Desktop đã mở và đăng nhập đúng tài khoản có quyền ` +
-      `vào Shared Drive "${SHARED_DRIVE_NAME}" chưa, và đã đồng bộ xong chưa.`
+      `vào Shared Drive "${SHARED_DRIVE_NAME}" chưa, và đã đồng bộ xong chưa.\n\n` +
+      `(Chỉ ảnh hưởng phần lưu ảnh/PDF — tài khoản và dữ liệu khác vẫn hoạt động qua mạng.)`
     );
   }
-  DATA_ROOT = path.join(sharedRoot, 'App Data');
   FILES_ROOT = path.join(sharedRoot, 'List End Of Line Test');
-  fs.mkdirSync(DATA_ROOT, { recursive: true });
   fs.mkdirSync(FILES_ROOT, { recursive: true });
-  appendLog(`DATA_ROOT=${DATA_ROOT} FILES_ROOT=${FILES_ROOT}`);
-  startLogSync(DATA_ROOT);
+  appendLog(`FILES_ROOT=${FILES_ROOT}`);
+  startLogSync(path.join(sharedRoot, 'App Data'));
 }
 
-function waitForBackend(retries = 30, delayMs = 500) {
+// Đợi backend không chỉ "còn sống" (health 200) mà phải THẬT SỰ sẵn sàng
+// (ready:true — đã tải xong tài khoản từ Drive) rồi mới mở cửa sổ. Nếu chỉ
+// đợi health 200 thì cửa sổ có thể mở ra trước khi dữ liệu tải xong, người
+// dùng đăng nhập ngay sẽ bị báo nhầm "sai tài khoản hoặc mật khẩu".
+function waitForBackend(retries = 60, delayMs = 500) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     function check() {
       attempts += 1;
       const req = http.get(`http://127.0.0.1:${PORT}/api/health`, (res) => {
-        if (res.statusCode === 200) resolve();
-        else retry();
+        let body = '';
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            try {
+              if (JSON.parse(body).ready) { resolve(); return; }
+            } catch (_) { /* body chưa parse được — coi như chưa sẵn sàng, thử lại */ }
+          }
+          retry();
+        });
       });
       req.on('error', retry);
     }
@@ -120,7 +130,17 @@ function waitForBackend(retries = 30, delayMs = 500) {
 
 async function startBackend() {
   appendLog(`=== App khởi động (version ${app.getVersion()}) ===`);
-  checkDataRoot();
+
+  // Tài khoản/dữ liệu giờ qua thẳng Google Drive API (không cần ổ đĩa ánh xạ
+  // nào), CHỈ ảnh/PDF mới cần Shared Drive gắn đúng ổ đĩa — nên nếu không
+  // tìm thấy, chỉ cảnh báo rồi vẫn mở app bình thường (đăng nhập, xem dữ
+  // liệu... vẫn dùng được), không chặn hẳn cả app như trước nữa.
+  try {
+    checkFilesRoot();
+  } catch (err) {
+    appendLog(`Cảnh báo: ${err.message}`);
+    dialog.showErrorBox('Không tìm thấy thư mục lưu ảnh/PDF', err.message);
+  }
 
   const exePath = getBackendExePath();
   if (!fs.existsSync(exePath)) {
@@ -132,8 +152,7 @@ async function startBackend() {
   backendProcess = spawn(exePath, [], {
     env: {
       ...process.env,
-      DATA_ROOT,
-      ROOT_PATH: FILES_ROOT,
+      ROOT_PATH: FILES_ROOT || '',
       PORT: String(PORT),
     },
     windowsHide: true,

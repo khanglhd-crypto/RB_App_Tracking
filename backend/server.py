@@ -17,10 +17,10 @@ from api.audit import audit_bp
 from database import filestore
 from logsetup import setup_logging
 
-logger = setup_logging(filestore.get_data_root())
+logger = setup_logging()
 logger.info(
-    "=== Backend started (PID=%s) DATA_ROOT=%s ROOT_PATH=%s ===",
-    os.getpid(), filestore.get_data_root(), os.environ.get("ROOT_PATH", ""),
+    "=== Backend started (PID=%s) ROOT_PATH=%s ===",
+    os.getpid(), os.environ.get("ROOT_PATH", ""),
 )
 
 
@@ -83,7 +83,10 @@ def _log_unhandled_error(err):
 
 @app.route("/api/health")
 def health():
-    return jsonify({"status": "ok"})
+    # "ready" chỉ true khi collection "users" đã tải xong từ Drive — Electron
+    # đợi cờ này trước khi mở cửa sổ, để tránh người dùng đăng nhập ngay lúc
+    # dữ liệu chưa kịp tải xong (sẽ báo nhầm "sai tài khoản hoặc mật khẩu").
+    return jsonify({"status": "ok", "ready": filestore.is_ready()})
 
 
 @app.route("/")

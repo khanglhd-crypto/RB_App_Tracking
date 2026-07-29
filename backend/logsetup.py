@@ -1,22 +1,22 @@
 """
 Ghi log hoạt động của backend để chẩn đoán lỗi từ xa (vd máy đồng nghiệp bị
 treo/chậm mà không rõ nguyên nhân) — không cần đồng nghiệp hiểu gì cả, log
-tự chạy nền, người quản trị đọc lại trên máy mình sau khi Shared Drive đồng
-bộ xong.
+tự chạy nền, người quản trị đọc lại trên máy mình sau khi Drive đồng bộ xong.
 
-Ghi ra file LOCAL trước (nhanh, không phụ thuộc Google Drive), rồi định kỳ
-copy file đó lên Shared Drive (_logs/<tên máy>.log) — KHÔNG ghi trực tiếp
-lên Shared Drive mỗi request, vì chính kiểu ghi file dồn dập lên ổ đĩa ảo
-của Google Drive là nghi phạm gây treo mà log này đang muốn tìm ra.
+Ghi ra file LOCAL trước (nhanh, không phụ thuộc mạng), rồi định kỳ đẩy file
+đó lên Google Drive (qua drive_store.py, gọi thẳng API — KHÔNG còn copy vào
+1 ổ đĩa mạng ánh xạ như trước, vì đó chính là kiểu thao tác từng gây treo
+trên máy đồng nghiệp mà log này dùng để chẩn đoán).
 """
 
 import logging
 import os
-import shutil
 import tempfile
 import threading
 import time
 from logging.handlers import RotatingFileHandler
+
+from drive_store import get_shared_sync
 
 SYNC_INTERVAL_SECONDS = 30
 
@@ -25,7 +25,7 @@ def _machine_name():
     return os.environ.get("COMPUTERNAME") or os.environ.get("USERNAME") or "unknown"
 
 
-def setup_logging(data_root):
+def setup_logging():
     machine = _machine_name()
 
     local_dir = os.path.join(tempfile.gettempdir(), "rb-control-logs")
@@ -39,19 +39,12 @@ def setup_logging(data_root):
     handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
     logger.addHandler(handler)
 
-    remote_dir = os.path.join(data_root, "_logs")
-    remote_path = os.path.join(remote_dir, f"{machine}.log")
-
-    def _sync_once():
-        try:
-            os.makedirs(remote_dir, exist_ok=True)
-            shutil.copyfile(local_path, remote_path)
-        except OSError:
-            pass  # đồng bộ log là phụ — lỗi ở đây không được làm ảnh hưởng app chính
-
     def _sync_loop():
         while True:
-            _sync_once()
+            try:
+                get_shared_sync().upload_log_file(f"{machine}.log", local_path)
+            except Exception:
+                pass  # đồng bộ log là phụ — lỗi ở đây không được ảnh hưởng app chính
             time.sleep(SYNC_INTERVAL_SECONDS)
 
     threading.Thread(target=_sync_loop, daemon=True).start()

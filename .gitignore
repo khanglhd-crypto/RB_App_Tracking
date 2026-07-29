@@ -1,6 +1,8 @@
 # Secrets — không bao giờ commit
 backend/.env
 .env
+backend/google_oauth_client.json
+backend/google_drive_token.json
 
 # Python
 __pycache__/

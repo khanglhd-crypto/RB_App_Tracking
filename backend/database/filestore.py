@@ -1,45 +1,22 @@
 """
-Lưu trữ kiểu file — thay thế hoàn toàn PostgreSQL/Supabase để app chạy được
-100% offline trên từng máy, đồng bộ giữa các máy qua Google Drive (Shared
-Drive) thay vì qua 1 server database chung.
+Lưu trữ kiểu file — nay ủy quyền toàn bộ cho drive_store.py (gọi thẳng
+Google Drive API), thay vì đọc/ghi trực tiếp vào 1 ổ đĩa mạng ánh xạ (mapped
+drive qua Google Drive for Desktop — hay lỗi vặt: Paused, nhầm ổ đĩa,
+Stream/Mirror...).
 
-Nguyên tắc: MỖI BẢN GHI LÀ 1 FILE JSON RIÊNG (không dùng 1 file DB chung) —
-để 2 máy chỉ "đụng nhau" khi cùng sửa đúng 1 bản ghi cùng lúc (hiếm), thay vì
-đụng nhau mỗi khi bất kỳ ai ghi bất cứ gì (chắc chắn xảy ra nếu dùng 1 file
-chung, dễ hỏng cả file).
+Giữ NGUYÊN chữ ký các hàm cũ (list_records, get_record, save_record,
+delete_record, find_one, find_all, new_id) để toàn bộ code ở api/*.py không
+cần sửa gì — chỉ đổi bên trong cách lưu trữ hoạt động.
 
-ID vẫn giữ kiểu số (không đổi sang UUID chuỗi) để toàn bộ code frontend hiện
-tại (các chỗ onclick="...(${item.id})" không có dấu nháy) chạy đúng mà không
+ID vẫn giữ kiểu số (không đổi sang UUID chuỗi) để code frontend hiện tại
+(các chỗ onclick="...(${item.id})" không có dấu nháy) chạy đúng mà không
 cần sửa gì — dùng số ngẫu nhiên lớn (52-bit) thay cho auto-increment, để
 nhiều máy tạo bản ghi cùng lúc mà không lo trùng ID.
-
-Thư mục gốc lấy từ biến môi trường DATA_ROOT (đặt vào đúng thư mục trong
-Shared Drive, vd "G:\\Shared drives\\Charge Station Documents\\App Data").
 """
 
-import glob
-import json
-import os
 import random
-import tempfile
 
-
-def get_data_root():
-    root = os.environ.get("DATA_ROOT")
-    if not root:
-        # Mặc định dùng khi chạy dev cục bộ, chưa cấu hình DATA_ROOT.
-        root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "local_data")
-    return root
-
-
-def _collection_dir(collection):
-    d = os.path.join(get_data_root(), collection)
-    os.makedirs(d, exist_ok=True)
-    return d
-
-
-def _record_path(collection, record_id):
-    return os.path.join(_collection_dir(collection), f"{record_id}.json")
+from drive_store import get_shared_sync as _get_sync
 
 
 def new_id():
@@ -48,57 +25,27 @@ def new_id():
     return random.getrandbits(52)
 
 
+def is_ready():
+    """True khi collection "users" đã tải xong từ Drive — dùng để /api/health
+    báo cho Electron biết lúc nào thật sự nên mở cửa sổ (tránh mở app sớm rồi
+    người dùng đăng nhập ngay lúc dữ liệu chưa kịp tải xong)."""
+    return _get_sync().is_ready()
+
+
 def list_records(collection):
-    """Đọc toàn bộ bản ghi trong 1 collection, mới nhất trước (theo id giảm dần
-    - id lớn hơn = tạo sau, vì new_id() dùng số ngẫu nhiên nên xấp xỉ ngẫu
-    nhiên về thời gian; các API cần sort theo thời gian thật nên tự sort lại
-    theo time_label/created_at khi cần)."""
-    items = []
-    for path in glob.glob(os.path.join(_collection_dir(collection), "*.json")):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                items.append(json.load(f))
-        except (OSError, json.JSONDecodeError):
-            continue  # bỏ qua file lỗi/đang ghi dở, không làm sập cả danh sách
-    return items
+    return _get_sync().list_records(collection)
 
 
 def get_record(collection, record_id):
-    path = _record_path(collection, record_id)
-    if not os.path.isfile(path):
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return None
+    return _get_sync().get_record(collection, record_id)
 
 
 def save_record(collection, record_id, data):
-    """Ghi đè hoặc tạo mới 1 bản ghi. Ghi ra file tạm rồi rename để tránh file
-    bị dở dang nếu app tắt đột ngột giữa lúc ghi."""
-    path = _record_path(collection, record_id)
-    dir_ = os.path.dirname(path)
-    fd, tmp_path = tempfile.mkstemp(prefix=".tmp_", dir=dir_)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp_path, path)
-    except Exception:
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
-        raise
+    _get_sync().save_record(collection, record_id, data)
 
 
 def delete_record(collection, record_id):
-    path = _record_path(collection, record_id)
-    try:
-        os.remove(path)
-        return True
-    except OSError:
-        return False
+    return _get_sync().delete_record(collection, record_id)
 
 
 def find_one(collection, predicate):
