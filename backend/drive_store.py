@@ -173,35 +173,39 @@ class DriveSync:
     # ------------------------------------------------------------------ #
     def _startup(self):
         try:
-            self._init_folders()
-            # "users" cần có ngay để đăng nhập được — ưu tiên tải trước và
-            # bật "ready" NGAY sau đó (KHÔNG đợi hết mọi collection), để thời
+            # Chỉ tìm/tạo thư mục "users" trước — KHÔNG chờ tìm/tạo thư mục
+            # của 5 collection còn lại (mỗi cái là 1 lượt gọi mạng riêng).
+            # "users" cần có ngay để đăng nhập được, nên bật "ready" NGAY sau
+            # khi tải xong "users" (không đợi hết mọi collection), để thời
             # gian mở app không phình to dần theo tổng dữ liệu lịch sử (audit
-            # log, phiếu test... càng dùng lâu càng nhiều) — tránh timeout mở
-            # app. Các màn hình khác (IPC, Trạm, Sự vụ...) có thể hiện trống
-            # vài giây đầu trong lúc tải nốt ở nền, tự hết ngay sau đó.
+            # log, phiếu test... càng dùng lâu càng nhiều) và không cộng dồn
+            # thêm độ trễ mạng của những collection chưa cần dùng ngay — tránh
+            # lặp lại đúng kiểu timeout mở app đã từng gặp. Các màn hình khác
+            # (IPC, Trạm, Sự vụ...) có thể hiện trống vài giây đầu trong lúc
+            # tải nốt ở nền, tự hết ngay sau đó.
+            self._init_folder("users")
             self._pull_collection("users")
             self.ready.set()
             for col in COLLECTIONS:
                 if col != "users":
+                    self._init_folder(col)
                     self._pull_collection(col)
         except Exception:
             logger.exception("Loi khi khoi tao DriveSync (_startup)")
             self.ready.set()  # đừng để app treo mãi nếu lần đầu lỗi — cứ chạy tiếp với cache rỗng
         self._sync_loop()
 
-    def _init_folders(self):
-        for col in COLLECTIONS:
-            res = self._list_files(
-                q=f"name='{col}' and '{APP_DATA_FOLDER_ID}' in parents and trashed=false",
-                fields="files(id,name)",
-            )
-            files = res.get("files", [])
-            if files:
-                self.folder_ids[col] = files[0]["id"]
-            else:
-                folder = self._create_folder(col, APP_DATA_FOLDER_ID)
-                self.folder_ids[col] = folder["id"]
+    def _init_folder(self, collection):
+        res = self._list_files(
+            q=f"name='{collection}' and '{APP_DATA_FOLDER_ID}' in parents and trashed=false",
+            fields="files(id,name)",
+        )
+        files = res.get("files", [])
+        if files:
+            self.folder_ids[collection] = files[0]["id"]
+        else:
+            folder = self._create_folder(collection, APP_DATA_FOLDER_ID)
+            self.folder_ids[collection] = folder["id"]
 
     def _collection_cache_dir(self, collection):
         d = os.path.join(self.cache_root, collection)
