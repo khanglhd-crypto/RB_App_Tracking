@@ -17,6 +17,7 @@ vào bản ghi JSON (không lưu base64 trong đó).
 
 import base64
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from flask import Blueprint, Response, jsonify, request
@@ -76,15 +77,27 @@ def ipc_save():
     time_label = datetime.now().strftime("%d/%m/%Y %H:%M")
 
     photo_paths = {"sn": None, "anydesk": None, "ultraview": None}
+
+    def _upload_one(field_and_label):
+        field, (_, label) = field_and_label
+        data_url = data.get(f"{field}Photo")
+        if not data_url:
+            return field, None
+        header, b64data = data_url.split(",", 1)
+        raw = base64.b64decode(b64data)
+        filename = f"{label}.jpg"
+        file_id = sync.upload_named_file(folder_id, filename, raw, "image/jpeg", known_id=known_names.get(filename))
+        return field, file_id
+
     try:
         sync = get_shared_sync()
         folder_id = sync.resolve_folder_path(IPC_BASE_FOLDER, [_safe_name(sn)])
-        for field, (_, label) in PHOTO_FIELD_KEYS.items():
-            data_url = data.get(f"{field}Photo")
-            if data_url:
-                header, b64data = data_url.split(",", 1)
-                raw = base64.b64decode(b64data)
-                photo_paths[field] = sync.upload_named_file(folder_id, f"{label}.jpg", raw, "image/jpeg")
+        known_names = sync.list_folder_names(folder_id)
+        # Toi da 3 anh (SN/AnyDesk/UltraView), doc lap nhau -> tai song song
+        # thay vi tuan tu de khong cong don do tre mang.
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            for field, file_id in executor.map(_upload_one, PHOTO_FIELD_KEYS.items()):
+                photo_paths[field] = file_id
     except (ValueError, IndexError) as err:
         return jsonify({"ok": False, "error": f"Ảnh không hợp lệ: {err}"}), 400
     except Exception as err:

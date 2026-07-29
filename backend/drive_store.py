@@ -245,18 +245,41 @@ class DriveSync:
                 current = self._find_or_create_folder(seg, current)
         return current
 
-    def upload_named_file(self, folder_id, filename, content, mimetype):
+    def list_folder_names(self, folder_id):
+        """Trả về {tên file: file id} cho MỌI file trong 1 thư mục — 1 lần gọi
+        mạng duy nhất, dùng để kiểm tra "đã có file này chưa" hàng loạt thay
+        vì phải hỏi riêng từng file (nhanh hơn nhiều khi có nhiều ảnh)."""
+        names = {}
+        page_token = None
+        while True:
+            res = self._list_files(
+                q=f"'{folder_id}' in parents and trashed=false",
+                fields="nextPageToken, files(id,name)",
+                page_token=page_token,
+            )
+            for f in res.get("files", []):
+                names[f["name"]] = f["id"]
+            page_token = res.get("nextPageToken")
+            if not page_token:
+                break
+        return names
+
+    def upload_named_file(self, folder_id, filename, content, mimetype, known_id=None):
         """Tạo mới (hoặc ghi đè nếu đã có đúng tên trong đúng thư mục) 1 file
         — dùng cho ảnh lẻ/PDF, không cần theo dõi modifiedTime như dữ liệu
         JSON (mỗi lần xuất phiếu là 1 file mới hoặc ghi đè bản cũ, không cần
-        đồng bộ 2 chiều phức tạp)."""
-        res = self._list_files(
-            q=f"name='{filename}' and '{folder_id}' in parents and trashed=false",
-            fields="files(id)",
-        )
-        found = res.get("files", [])
-        if found:
-            return self._update_file_content(found[0]["id"], content, mimetype, "id")["id"]
+        đồng bộ 2 chiều phức tạp).
+        known_id: nếu đã biết trước fileId (vd từ list_folder_names() gọi 1
+        lần cho cả loạt ảnh) thì dùng luôn, khỏi phải hỏi lại cho từng file."""
+        if known_id is None:
+            res = self._list_files(
+                q=f"name='{filename}' and '{folder_id}' in parents and trashed=false",
+                fields="files(id)",
+            )
+            found = res.get("files", [])
+            known_id = found[0]["id"] if found else None
+        if known_id:
+            return self._update_file_content(known_id, content, mimetype, "id")["id"]
         return self._create_file_with_content(filename, folder_id, content, mimetype, "id")["id"]
 
     def download_file_bytes(self, file_id):
@@ -453,7 +476,11 @@ class DriveSync:
 
         with self.lock:
             self.pending_uploads.add((collection, record_id))
-        self._try_push_one(collection, record_id)  # co gang day ngay - khong duoc thi vong lap nen tu thu lai
+        # Đẩy lên Drive ở NỀN (không chờ) — ghi cục bộ xong là trả lời ngay
+        # cho người dùng (nhanh, không phụ thuộc tốc độ mạng lúc đó); máy
+        # khác sẽ thấy thay đổi này sau vài giây (nền) thay vì ngay lập tức,
+        # đổi lại người bấm nút không phải đợi cả round-trip lên Google.
+        threading.Thread(target=self._try_push_one, args=(collection, record_id), daemon=True).start()
 
     # ------------------------------------------------------------------ #
     # Log chẩn đoán (logsetup.py) — 1 file .log riêng mỗi máy trong thư mục
@@ -522,9 +549,12 @@ class DriveSync:
             self.pending_uploads.discard((collection, record_id))
             known = self.file_meta.get(collection, {}).pop(record_id, None)
         if known:
+            key = (collection, record_id)
             with self.lock:
-                self.pending_deletes[(collection, record_id)] = known["id"]
-            self._try_delete_one((collection, record_id), known["id"])
+                self.pending_deletes[key] = known["id"]
+            # Xóa trên Drive ở nền — lý do giống save_record() ở trên, không
+            # bắt người dùng đợi cả round-trip mạng lúc bấm nút Xóa.
+            threading.Thread(target=self._try_delete_one, args=(key, known["id"]), daemon=True).start()
         return True
 
 

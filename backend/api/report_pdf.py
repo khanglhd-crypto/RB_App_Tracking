@@ -18,6 +18,7 @@ Drive for Desktop nữa.
 
 import base64
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from flask import Blueprint, Response, jsonify, request
 
@@ -78,14 +79,25 @@ def export_report_pdf():
     except Exception as err:
         return jsonify({"ok": False, "error": f"Không tạo được thư mục lưu trên Drive: {err}"}), 500
 
+    def _upload_one(img_and_known):
+        img, known_names = img_and_known
+        label = (img.get("label") or "").strip()
+        data_url = img.get("dataUrl")
+        if not (label and data_url):
+            return
+        header, b64data = data_url.split(",", 1)
+        raw = base64.b64decode(b64data)
+        filename = f"{_safe_name(label)}.jpg"
+        sync.upload_named_file(folder_id, filename, raw, "image/jpeg", known_id=known_names.get(filename))
+
     try:
-        for img in images:
-            label = (img.get("label") or "").strip()
-            data_url = img.get("dataUrl")
-            if label and data_url:
-                header, b64data = data_url.split(",", 1)
-                raw = base64.b64decode(b64data)
-                sync.upload_named_file(folder_id, f"{_safe_name(label)}.jpg", raw, "image/jpeg")
+        # 1 lần liệt kê MỌI file đã có trong thư mục đích (thay vì hỏi riêng
+        # từng ảnh "đã có chưa"), rồi tải ảnh song song — với 14 ảnh, cách cũ
+        # tốn tới 28 lượt gọi mạng tuần tự, giờ chỉ còn 1 (liệt kê) + 14
+        # (song song, tối đa 6 cùng lúc).
+        known_names = sync.list_folder_names(folder_id)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            list(executor.map(_upload_one, [(img, known_names) for img in images]))
     except Exception as err:
         return jsonify({"ok": False, "error": f"Không lưu được ảnh lẻ lên Drive: {err}"}), 500
 
