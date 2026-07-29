@@ -91,7 +91,7 @@
 
         return [
             { label: 'Tổng Trạm',      value: tramCount,     icon: '📡', color: 'blue',   link: 'on-tram.html?tab=list' },
-            { label: 'Tổng Trụ',       value: truCount,      icon: '🔌', color: 'cyan',   link: 'test-tru.html?tab=list' },
+            { label: 'Tổng Trụ',       value: truCount,      icon: '<img src="img/charge-point-icon.png" alt="" class="stat-icon-img">', color: 'cyan',   link: 'test-tru.html?tab=list' },
             { label: 'Tổng IPC',       value: ipcCount,      icon: '💻', color: 'indigo', link: 'test-ipc.html' },
             { label: 'Sự Vụ đang mở',  value: suvuOpenCount, icon: '⚠️', color: 'amber',  link: 'su-vu.html?tab=list' }
         ];

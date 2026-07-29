@@ -424,6 +424,7 @@ button { cursor: pointer; border: none; background: none; }
 .stat-icon-box.cyan     { background: linear-gradient(135deg, #06b6d4, #0891b2); }
 .stat-icon-box.indigo   { background: linear-gradient(135deg, #6366f1, #4338ca); }
 .stat-icon-box.amber    { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.stat-icon-img          { width: 28px; height: 28px; object-fit: contain; }
 
 /* ==========================================================================
    KHU VỰC BẢNG - SỰ VỤ MỚI NHẤT
@@ -596,6 +597,7 @@ table.data-table {
     .stat-card { padding: 16px; }
     .stat-info .stat-value { font-size: 24px; }
     .stat-icon-box { width: 42px; height: 42px; font-size: 17px; }
+    .stat-icon-img { width: 22px; height: 22px; }
 }
 
 @media (max-width: 420px) {
